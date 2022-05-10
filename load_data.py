@@ -18,10 +18,13 @@ branch_folder : gdrive/MyDrive/FYP/Data/DRP/root_folder/root_005
 
 import functions
 import utils
-import models 
+# import models_deprecated 
+from utils import *
+from functions import load_drug_smile_X, save_mix_drug_cell_matrix_X
 
 dataset_X = "GDSC"
-branch_name = "root_028"
+branch_name = "root_002"
+root_folder = "root_folder/"
 
 check_duplicate = False
 # check_duplicate = True
@@ -37,18 +40,21 @@ if (check_duplicate):
     raise ValueError(f'{branch_name} already exists in the folder {root_folder}. Try naming the folder : {new_fol_str}')
 
 branch_folder = root_folder + branch_name
-branch_folder
+# branch_folder
+os.makedirs(branch_folder, exist_ok=True)
 
 do_mol_ecfp = False
 fpl = None
 do_edge_features = True
-do_atom_ecfp = False
+# do_atom_ecfp = False
+do_atom_ecfp = True
 ecfp_radius = 3
 use_radius = None
 
 drug_dict_X, drug_smile_X, smile_graph_X = load_drug_smile_X(do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
 xd_X, xc_X, y_X = save_mix_drug_cell_matrix_X(do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
 
+# print(smile_graph_X)
 
 randomize = False
 seed = 19871729 ## 19871729
@@ -103,6 +109,6 @@ print(f"branch_name = {branch_name}")
 print(f"branch_folder = {branch_folder}")
 
 this_branch = branch_name
-train_data = TestbedDataset(root='gdrive/MyDrive/FYP/Data/DRP/root_folder/'+ this_branch, dataset=dataset_X+'_train_mix', xd=xd_train_X, xt=xc_train_X, y=y_train_X, smile_graph=smile_graph_X)
-val_data = TestbedDataset(root='gdrive/MyDrive/FYP/Data/DRP/root_folder/' + this_branch, dataset=dataset_X+'_val_mix', xd=xd_val_X, xt=xc_val_X, y=y_val_X, smile_graph=smile_graph_X)
-test_data = TestbedDataset(root='gdrive/MyDrive/FYP/Data/DRP/root_folder/'+ this_branch, dataset=dataset_X+'_test_mix', xd=xd_test_X, xt=xc_test_X, y=y_test_X, smile_graph=smile_graph_X)
+train_data = TestbedDataset(root='root_folder/'+ this_branch, dataset=dataset_X+'_train_mix', xd=xd_train_X, xt=xc_train_X, y=y_train_X, smile_graph=smile_graph_X)
+val_data = TestbedDataset(root='root_folder/' + this_branch, dataset=dataset_X+'_val_mix', xd=xd_val_X, xt=xc_val_X, y=y_val_X, smile_graph=smile_graph_X)
+test_data = TestbedDataset(root='root_folder/'+ this_branch, dataset=dataset_X+'_test_mix', xd=xd_test_X, xt=xc_test_X, y=y_test_X, smile_graph=smile_graph_X)

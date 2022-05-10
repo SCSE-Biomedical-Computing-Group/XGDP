@@ -5,7 +5,7 @@ from collections import Counter
 from rdkit import Chem
 from rdkit.Chem.Draw import IPythonConsole
 from rdkit.Chem import Draw
-import pandasql
+# import pandasql
 
 import numpy as np
 from rdkit.Chem import AllChem
@@ -37,10 +37,15 @@ import nvidia_smi
 
 """## Data Setup"""
 
-folder = "gdrive/MyDrive/FYP/Data/DRP/"  ## aka folder
-root_folder = "gdrive/MyDrive/FYP/Data/DRP/root_folder/"
-data_folder = "gdrive/MyDrive/FYP/Data/"
-sage_folder = "gdrive/MyDrive/FYP/Data/SAGEData/"
+# folder = "gdrive/MyDrive/FYP/Data/DRP/"  ## aka folder
+# root_folder = "gdrive/MyDrive/FYP/Data/DRP/root_folder/"
+# data_folder = "gdrive/MyDrive/FYP/Data/"
+# sage_folder = "gdrive/MyDrive/FYP/Data/SAGEData/"
+
+folder = "data/"  ## aka folder
+root_folder = "root_folder/"
+data_folder = "data/"
+# sage_folder = "gdrive/MyDrive/FYP/Data/SAGEData/"
 
 # df0 = pd.read_csv('gdrive/MyDrive/FYP/Data/DRP/drug_smiles.csv') 
 df0 = pd.read_csv(data_folder+'/drug_smiles.csv')

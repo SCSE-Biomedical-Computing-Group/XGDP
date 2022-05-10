@@ -2,6 +2,7 @@
 
 
 import pandas as pd
+import pickle
 import pubchempy as pcp
 from collections import Counter
 
@@ -31,9 +32,39 @@ import datetime
 import argparse
 import nvidia_smi
 
+# from dataframes import ECFP6
+from utils import *
+# from torch.utils.data import DataLoader
+from torch_geometric.loader import DataLoader 
 
 
 IPythonConsole.ipython_useSVG=True  #< set this to False if you want PNGs instead of SVGs
+class ECFP6:
+    def __init__(self, smiles):
+        self.mols = [Chem.MolFromSmiles(i) for i in smiles]
+        self.smiles = smiles
+
+    def mol2fp(self, mol, fp_length, radius = 3):
+        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius = radius, nBits = fp_length)
+        array = np.zeros((1,))
+        DataStructs.ConvertToNumpyArray(fp, array)
+        return array
+
+    def compute_ECFP6(self, fp_length, name = None, generate_df = True):
+        bit_headers = ['bit' + str(i) for i in range(fp_length)]
+        arr = np.empty((0,fp_length), int).astype(int)
+        for i in self.mols:
+            fp = self.mol2fp(i, fp_length)
+            arr = np.vstack((arr, fp))
+        if (not generate_df):
+            return np.asarray(arr).astype(int)
+        df_ecfp6 = pd.DataFrame(np.asarray(arr).astype(int),columns=bit_headers)
+        df_ecfp6.insert(loc=0, column='smiles', value=self.smiles)
+        if name != None:
+            df_ecfp6.to_csv(name[:-4]+'_ECFP6.csv', index=False)
+        
+        return df_ecfp6
+
 def mol_with_atom_index(mol):
     for atom in mol.GetAtoms():
         atom.SetAtomMapNum(atom.GetIdx())
@@ -233,7 +264,7 @@ def smile_to_graph_X(smile, do_mol_ecfp, fpl = None, do_edge_features = False, d
     else:
         return c_size, features, edge_index, g
 
-def load_drug_smile_X(do_mol_ecfp = False, fpl = None, do_edge_features = False, do_atom_ecfp = False, ecfp_radius = None, use_radius = None):
+def load_drug_smile_X(do_mol_ecfp = False, fpl = None, do_edge_features = False, do_atom_ecfp = False, ecfp_radius = None, use_radius = None, folder = "data/" ):
     """
       Output :
         (dictionary) drug_dict : Keys - (str) name of drug, Values - (int) index/position of drug in drug_smile
@@ -244,16 +275,20 @@ def load_drug_smile_X(do_mol_ecfp = False, fpl = None, do_edge_features = False,
     drug_smile = []
 
 
-    reader = csv.reader(open(folder + "drug_smiles.csv"))     ## From csv
+    reader = csv.reader(open(folder + "drug_smiles.csv"))    ## From csv
     next(reader, None)                                        ## From csv
 
     for cnt, item in enumerate(reader):                       ## From csv
                                                                 ## From df3
-        name = item[0]
-        smile = item[2]                                       ## From csv
+        # print(item)
+        name = item[1]                                          
+        # smile = item[2]                                       ## From csv
+        smile = item[-1]                                       ## From csv
 
+        # skip the Cisplatin drug
         if (smile == "N.N.[Cl-].[Cl-].[Pt+2]"):
             print(f"name = {name}, smile = {smile}")
+            continue
         # smile = item[1]                                                                           ## From df3
 
         if name in drug_dict:
@@ -266,8 +301,10 @@ def load_drug_smile_X(do_mol_ecfp = False, fpl = None, do_edge_features = False,
             print(f"indx = {len(drug_smile)} , {drug_smile[-1]}")
 
     smile_graph = {}
+    # print(drug_smile)
     for smile in drug_smile:
         # g = smile_to_graph(smile)
+        # print(smile)
         if (do_edge_features):
             gr = smile_to_graph_X(smile, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
         else:
@@ -276,7 +313,7 @@ def load_drug_smile_X(do_mol_ecfp = False, fpl = None, do_edge_features = False,
 
     return drug_dict, drug_smile, smile_graph
 
-def save_cell_mut_matrix_X():
+def save_cell_mut_matrix_X(folder = 'data/'):
     """
     PANCANCER_Genetic_feature.csv
     0                1                 2           3          4         5                6
@@ -324,7 +361,7 @@ def save_cell_mut_matrix_X():
     return cell_dict, cell_feature, matrix_list, mut_dict
 
 
-def save_cell_mut_matrix_XO():
+def save_cell_mut_matrix_XO(folder = 'data/'):
     """
  Output :
         (dictionary) cell_dict : Keys - (str) cosmic_sample_id, Values - (int) index/position of the key (cosmic_sample_id) in uniquely sorted list of cosmic_sample_id values
@@ -369,13 +406,18 @@ def save_cell_mut_matrix_XO():
 
     return cell_dict, cell_feature
 
-def save_mix_drug_cell_matrix_X(do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None):
+def save_mix_drug_cell_matrix_X(do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, folder = 'data/'):
     f = open(folder + "PANCANCER_IC.csv")
     reader = csv.reader(f)
     next(reader)
 
     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X()
     drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
+    
+    # print(cell_dict)
+    # print(drug_dict)
+    # print(cell_feature)
+    # print(drug_smile)
 
     temp_data = []
     bExist = np.zeros((len(drug_dict), len(cell_dict)))
@@ -393,9 +435,12 @@ def save_mix_drug_cell_matrix_X(do_mol_ecfp=False, fpl=None, do_edge_features=Fa
     lst_drug = []
     lst_cell = []
     random.shuffle(temp_data)
+    # print(temp_data)
     for data in temp_data:
         drug, cell, ic50 = data
+        # print(drug, cell, ic50)
         if drug in drug_dict and cell in cell_dict:
+            # print(drug_smile[drug_dict[drug]])
             xd.append(drug_smile[drug_dict[drug]])        ## appending the smile of the drug into list xd
             xc.append(cell_feature[cell_dict[cell]])      ## appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
             y.append(ic50)                                ## appending (int) ic50 value of that smile to list y
@@ -404,6 +449,7 @@ def save_mix_drug_cell_matrix_X(do_mol_ecfp=False, fpl=None, do_edge_features=Fa
             lst_cell.append(cell)                         ## appending (numeric str) this Cosmic sample Id to list lst_cell
 
     xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)
+    print(xd)
 
 
     size = int(xd.shape[0] * 0.8)
@@ -434,7 +480,11 @@ def train(model, device, train_loader, optimizer, epoch, log_interval):
     for batch_idx, data in enumerate(train_loader):
         data = data.to(device)
         optimizer.zero_grad()
-        output, _ = model(data)
+        
+        # output, _ = model(data)
+        x, target, edge_index, batch, edge_feat = data.x, data.target, data.edge_index, data.batch, data.edge_features
+        output, _ = model(x, target, edge_index, batch, edge_feat)
+        
         loss = loss_fn(output, data.y.view(-1, 1).float().to(device))
         loss.backward()
         optimizer.step()
@@ -455,7 +505,11 @@ def predicting(model, device, loader):
     with torch.no_grad():
         for data in loader:
             data = data.to(device)
-            output, _ = model(data)
+            
+            # output, _ = model(data)
+            x, target, edge_index, batch, edge_feat = data.x, data.target, data.edge_index, data.batch, data.edge_features
+            output, _ = model(x, target, edge_index, batch, edge_feat)
+        
             total_preds = torch.cat((total_preds, output.cpu()), 0)
             total_labels = torch.cat((total_labels, data.y.view(-1, 1).cpu()), 0)
     torch.cuda.empty_cache()  ## no grad

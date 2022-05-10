@@ -1,6 +1,7 @@
 """## utils.py"""
 
 import os
+import sys
 import numpy as np
 from math import sqrt
 from scipy import stats
@@ -14,7 +15,7 @@ import matplotlib.pyplot as plt
 import functions 
 
 class TestbedDataset(InMemoryDataset):
-    def __init__(self, root='gdrive/MyDrive/FYP/Data/DRP/root_folder', dataset='davis',
+    def __init__(self, root='root_folder', dataset='davis',
                  xd=None, xt=None, y=None, transform=None,
                  pre_transform=None,smile_graph=None,saliency_map=False, testing = False):
 
@@ -72,6 +73,10 @@ class TestbedDataset(InMemoryDataset):
             labels = y[i]
 
             c_size, features, edge_index, edge_features, this_graph = smile_graph[smiles]
+            if len(edge_index) == 0:
+                print('smiles with no graph: ', smiles)
+            # print(edge_index)
+            # print(edge_features)
             # make the graph ready for PyTorch Geometrics GCN algorithms:
 
             if (self.testing):
