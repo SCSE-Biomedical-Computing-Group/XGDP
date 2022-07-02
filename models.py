@@ -6,8 +6,9 @@ from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv
 from torch_geometric.nn import global_max_pool as gmp
 
 
+# change num_features_xd into 78 for ordinary atom features (benchmark)
 class GCNNet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128,num_features_xd=192, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=270, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
 
         super(GCNNet, self).__init__()
 
@@ -35,9 +36,10 @@ class GCNNet(torch.nn.Module):
         self.fc2 = nn.Linear(1024, 128)
         self.out = nn.Linear(128, self.n_output)
 
-    def forward(self, x, target, edge_index, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat):
         # get graph input
         # x, edge_index, batch = data.x, data.edge_index, data.batch
+        edge_index = edge_index.long()
 
         x = self.conv1(x, edge_index)
         x = self.relu(x)
@@ -86,7 +88,7 @@ class GCNNet(torch.nn.Module):
     
     
 class GATNet(torch.nn.Module):
-    def __init__(self, num_features_xd=192, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.2):
+    def __init__(self, num_features_xd=270, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet, self).__init__()
 
         # graph layers
@@ -110,26 +112,28 @@ class GATNet(torch.nn.Module):
 
         # activation and regularization
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, target, edge_index, batch, edge_feat):
+    def forward(self, x, edge_index, x_cell_mut, batch_drug, edge_feat):
         # graph input feed-forward
         # x, edge_index, batch = data.x, data.edge_index, data.batch
 
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
+        # x = F.dropout(x, p=0.2, training=self.training)
         x = F.elu(self.gcn1(x, edge_index))
-        x = F.dropout(x, p=0.2, training=self.training)
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
         x = self.gcn2(x, edge_index)
         x = self.relu(x)
-        x = gmp(x, batch)          # global max pooling
+        x = gmp(x, batch_drug)          # global max pooling
         x = self.fc_g1(x)
         x = self.relu(x)
 
         # protein input feed-forward:
         # target = data.target
-        target = target[:,None,:]
+        x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
-        conv_xt = self.conv_xt_1(target)
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -158,8 +162,8 @@ class GATNet(torch.nn.Module):
     
 
 class GATv2Net(torch.nn.Module):
-    def __init__(self, num_features_xd=192, n_output=1, num_features_xt=25,
-                     n_filters=32, embed_dim=128, output_dim=128, dropout=0.2):
+    def __init__(self, num_features_xd=270, n_output=1, num_features_xt=25,
+                     n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATv2Net, self).__init__()
 
         # graph layers
@@ -183,17 +187,19 @@ class GATv2Net(torch.nn.Module):
 
         # activation and regularization
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, target, edge_index, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat):
         # graph input feed-forward
         # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
         # print(data.x.shape)
         # print(edge_feat.shape)
 
-        x = F.dropout(x, p=0.2, training=self.training)
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
         x = F.elu(self.gcn1(x, edge_index, edge_attr = edge_feat))
-        x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
+        # x = F.dropout(x, p=0.2, training=self.training)
         x = self.gcn2(x, edge_index, edge_attr = edge_feat)
         x = self.relu(x)
         x = gmp(x, batch)          # global max pooling
@@ -232,7 +238,7 @@ class GATv2Net(torch.nn.Module):
         return out, x
 
 class GATNet_E(torch.nn.Module):
-    def __init__(self, num_features_xd=192, n_output=1, num_features_xt=25,
+    def __init__(self, num_features_xd=270, n_output=1, num_features_xt=25,
                      n_filters=32, embed_dim=128, output_dim=128, dropout=0.2):
         super(GATNet_E, self).__init__()
 
@@ -259,7 +265,7 @@ class GATNet_E(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, target, edge_index, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat):
         '''
         x: feature matrix of molecular graph
         target: gene mutation data
@@ -313,7 +319,7 @@ class GATNet_E(torch.nn.Module):
     
     
 class SAGENet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128,num_features_xd=192, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=270, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
 
         super(SAGENet, self).__init__()
 
@@ -347,7 +353,7 @@ class SAGENet(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, target, edge_index, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat):
         # get graph input
         # x, edge_index, batch = data.x, data.edge_index, data.batch
 
