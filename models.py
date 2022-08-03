@@ -2,13 +2,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU
-from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv
+from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv, GINEConv, GINConv
 from torch_geometric.nn import global_max_pool as gmp
+from torch_geometric.nn import global_add_pool
 
+'''
+    DeepChem feature set: 78
+    ECFP4: 192
+    ECFP4 + DeepChem: 270
+    ECFP6: 256
+    ECFP6 + DeepChem: 334
+'''
+
+'''
+TODO: 
+    1. align all models' forward arguments with GATNet (make sure batch is the 3rd one due to gnn_explainer's implementation)
+    2. remove x in the return (tuple cannot be accepted by gnn_explainer)
+'''
 
 # change num_features_xd into 78 for ordinary atom features (benchmark)
 class GCNNet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=270, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=334, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
 
         super(GCNNet, self).__init__()
 
@@ -36,16 +50,18 @@ class GCNNet(torch.nn.Module):
         self.fc2 = nn.Linear(1024, 128)
         self.out = nn.Linear(128, self.n_output)
 
-    def forward(self, x, edge_index, target, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat, edge_weight = None):
         # get graph input
+        # edge_weight is only used for decoding
+        
         # x, edge_index, batch = data.x, data.edge_index, data.batch
-        edge_index = edge_index.long()
+        # edge_index = edge_index.long()
 
-        x = self.conv1(x, edge_index)
+        x = self.conv1(x, edge_index, edge_weight)
         x = self.relu(x)
-        x = self.conv2(x, edge_index)
+        x = self.conv2(x, edge_index, edge_weight)
         x = self.relu(x)
-        x = self.conv3(x, edge_index)
+        x = self.conv3(x, edge_index, edge_weight)
         x = self.relu(x)
         x = gmp(x, batch)       # global max pooling
 
@@ -88,7 +104,7 @@ class GCNNet(torch.nn.Module):
     
     
 class GATNet(torch.nn.Module):
-    def __init__(self, num_features_xd=270, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet, self).__init__()
 
         # graph layers
@@ -112,20 +128,22 @@ class GATNet(torch.nn.Module):
 
         # activation and regularization
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, x_cell_mut, batch_drug, edge_feat):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat, return_attention_weights = False):
         # graph input feed-forward
         # x, edge_index, batch = data.x, data.edge_index, data.batch
-
         x = self.dropout(x)
         # x = F.dropout(x, p=0.2, training=self.training)
         x = F.elu(self.gcn1(x, edge_index))
         # x = F.dropout(x, p=0.2, training=self.training)
         x = self.dropout(x)
-        x = self.gcn2(x, edge_index)
+        if return_attention_weights:
+            x, attn_weights = self.gcn2(x, edge_index, return_attention_weights=return_attention_weights)
+        else:
+            x = self.gcn2(x, edge_index)
         x = self.relu(x)
-        x = gmp(x, batch_drug)          # global max pooling
+        x = gmp(x, batch)          # global max pooling
         x = self.fc_g1(x)
         x = self.relu(x)
 
@@ -158,11 +176,16 @@ class GATNet(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        
+        if return_attention_weights:
+            return out, x, attn_weights
+        else:
+            # return out, x
+            return out
     
 
 class GATv2Net(torch.nn.Module):
-    def __init__(self, num_features_xd=270, n_output=1, num_features_xt=25,
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25,
                      n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATv2Net, self).__init__()
 
@@ -187,9 +210,9 @@ class GATv2Net(torch.nn.Module):
 
         # activation and regularization
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat, return_attention_weights = False):
         # graph input feed-forward
         # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
         # print(data.x.shape)
@@ -200,7 +223,10 @@ class GATv2Net(torch.nn.Module):
         x = F.elu(self.gcn1(x, edge_index, edge_attr = edge_feat))
         x = self.dropout(x)
         # x = F.dropout(x, p=0.2, training=self.training)
-        x = self.gcn2(x, edge_index, edge_attr = edge_feat)
+        if return_attention_weights:
+            x, attn_weights = self.gcn2(x, edge_index, edge_attr = edge_feat, return_attention_weights=return_attention_weights)
+        else:
+            x = self.gcn2(x, edge_index, edge_attr = edge_feat)
         x = self.relu(x)
         x = gmp(x, batch)          # global max pooling
         x = self.fc_g1(x)
@@ -235,11 +261,15 @@ class GATv2Net(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        
+        if return_attention_weights:
+            return out, x, attn_weights
+        else:
+            return out, x
 
 class GATNet_E(torch.nn.Module):
-    def __init__(self, num_features_xd=270, n_output=1, num_features_xt=25,
-                     n_filters=32, embed_dim=128, output_dim=128, dropout=0.2):
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25,
+                     n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet_E, self).__init__()
 
         # graph layers
@@ -265,7 +295,7 @@ class GATNet_E(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat):
+    def forward(self, x, edge_index, target, batch, edge_feat, return_attention_weights = False):
         '''
         x: feature matrix of molecular graph
         target: gene mutation data
@@ -277,10 +307,15 @@ class GATNet_E(torch.nn.Module):
         # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
         # print(data.x.shape)
 
-        x = F.dropout(x, p=0.2, training=self.training)
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
         x = F.elu(self.gcn1(x, edge_index, edge_attr = edge_feat))
-        x = F.dropout(x, p=0.2, training=self.training)
-        x = self.gcn2(x, edge_index, edge_attr = edge_feat)
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
+        if return_attention_weights:
+            x, attn_weights = self.gcn2(x, edge_index, edge_attr = edge_feat, return_attention_weights=return_attention_weights)
+        else:
+            x = self.gcn2(x, edge_index, edge_attr = edge_feat)
         x = self.relu(x)
         x = gmp(x, batch)          # global max pooling
         x = self.fc_g1(x)
@@ -315,11 +350,15 @@ class GATNet_E(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        
+        if return_attention_weights:
+            return out, x, attn_weights
+        else:
+            return out, x
     
     
 class SAGENet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=270, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=334, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
 
         super(SAGENet, self).__init__()
 
@@ -393,6 +432,220 @@ class SAGENet(torch.nn.Module):
 
         # concat
         xc = torch.cat((x, xt), 1)
+        xc = self.fc1(xc)
+        xc = self.relu(xc)
+        xc = self.dropout(xc)
+        xc = self.fc2(xc)
+        xc = self.relu(xc)
+        xc = self.dropout(xc)
+        out = self.out(xc)
+        out = nn.Sigmoid()(out)
+        return out, x
+    
+    
+class GINNet(torch.nn.Module):
+    def __init__(self, n_output=1,num_features_xd=334, num_features_xt=25,
+                 n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
+
+        super(GINNet, self).__init__()
+
+        dim = 32
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+        self.n_output = n_output
+        # convolution layers
+        nn1 = Sequential(Linear(num_features_xd, dim), ReLU(), Linear(dim, dim))
+        self.conv1 = GINConv(nn1)
+        self.bn1 = torch.nn.BatchNorm1d(dim)
+
+        nn2 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv2 = GINConv(nn2)
+        self.bn2 = torch.nn.BatchNorm1d(dim)
+
+        nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv3 = GINConv(nn3)
+        self.bn3 = torch.nn.BatchNorm1d(dim)
+
+        nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv4 = GINConv(nn4)
+        self.bn4 = torch.nn.BatchNorm1d(dim)
+
+        nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv5 = GINConv(nn5)
+        self.bn5 = torch.nn.BatchNorm1d(dim)
+
+        self.fc1_xd = Linear(dim, output_dim)
+
+        # 1D convolution on protein sequence
+        self.embedding_xt = nn.Embedding(num_features_xt + 1, embed_dim)
+        self.conv_xt_1 = nn.Conv1d(in_channels=1000, out_channels=n_filters, kernel_size=8)
+
+        # cell line feature
+        self.conv_xt_1 = nn.Conv1d(in_channels=1, out_channels=n_filters, kernel_size=8)
+        self.pool_xt_1 = nn.MaxPool1d(3)
+        self.conv_xt_2 = nn.Conv1d(in_channels=n_filters, out_channels=n_filters*2, kernel_size=8)
+        self.pool_xt_2 = nn.MaxPool1d(3)
+        self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
+        self.pool_xt_3 = nn.MaxPool1d(3)
+        self.fc1_xt = nn.Linear(2944, output_dim)
+
+        # combined layers
+        self.fc1 = nn.Linear(2*output_dim, 1024)
+        self.fc2 = nn.Linear(1024, 128)
+        self.out = nn.Linear(128, n_output)
+
+        # activation and regularization
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x, edge_index, target, batch, edge_feat):
+        # x, edge_index, batch = data.x, data.edge_index, data.batch
+        #print(x)
+        #print(data.target)
+        x = F.relu(self.conv1(x, edge_index))
+        x = self.bn1(x)
+        x = F.relu(self.conv2(x, edge_index))
+        x = self.bn2(x)
+        x = F.relu(self.conv3(x, edge_index))
+        x = self.bn3(x)
+        x = F.relu(self.conv4(x, edge_index))
+        x = self.bn4(x)
+        x = F.relu(self.conv5(x, edge_index))
+        x = self.bn5(x)
+        x = global_add_pool(x, batch)
+        x = F.relu(self.fc1_xd(x))
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
+
+        # protein input feed-forward:
+        # target = data.target
+        target = target[:,None,:]
+
+        # 1d conv layers
+        conv_xt = self.conv_xt_1(target)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_1(conv_xt)
+        conv_xt = self.conv_xt_2(conv_xt)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_2(conv_xt)
+        conv_xt = self.conv_xt_3(conv_xt)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_3(conv_xt)
+        
+        # flatten
+        xt = conv_xt.view(-1, conv_xt.shape[1] * conv_xt.shape[2])
+        xt = self.fc1_xt(xt)
+        
+        # concat
+        xc = torch.cat((x, xt), 1)
+        # add some dense layers
+        xc = self.fc1(xc)
+        xc = self.relu(xc)
+        xc = self.dropout(xc)
+        xc = self.fc2(xc)
+        xc = self.relu(xc)
+        xc = self.dropout(xc)
+        out = self.out(xc)
+        out = nn.Sigmoid()(out)
+        return out, x
+    
+    
+class GINENet(torch.nn.Module):
+    def __init__(self, n_output=1,num_features_xd=334, num_features_xt=25,
+                 n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
+
+        super(GINENet, self).__init__()
+
+        dim = 32
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+        self.n_output = n_output
+        # convolution layers
+        nn1 = Sequential(Linear(num_features_xd, dim), ReLU(), Linear(dim, dim))
+        self.conv1 = GINEConv(nn1, edge_dim=4)
+        self.bn1 = torch.nn.BatchNorm1d(dim)
+
+        nn2 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv2 = GINEConv(nn2, edge_dim=4)
+        self.bn2 = torch.nn.BatchNorm1d(dim)
+
+        nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv3 = GINEConv(nn3, edge_dim=4)
+        self.bn3 = torch.nn.BatchNorm1d(dim)
+
+        nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv4 = GINEConv(nn4, edge_dim=4)
+        self.bn4 = torch.nn.BatchNorm1d(dim)
+
+        nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        self.conv5 = GINEConv(nn5, edge_dim=4)
+        self.bn5 = torch.nn.BatchNorm1d(dim)
+
+        self.fc1_xd = Linear(dim, output_dim)
+
+        # 1D convolution on protein sequence
+        self.embedding_xt = nn.Embedding(num_features_xt + 1, embed_dim)
+        self.conv_xt_1 = nn.Conv1d(in_channels=1000, out_channels=n_filters, kernel_size=8)
+
+        # cell line feature
+        self.conv_xt_1 = nn.Conv1d(in_channels=1, out_channels=n_filters, kernel_size=8)
+        self.pool_xt_1 = nn.MaxPool1d(3)
+        self.conv_xt_2 = nn.Conv1d(in_channels=n_filters, out_channels=n_filters*2, kernel_size=8)
+        self.pool_xt_2 = nn.MaxPool1d(3)
+        self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
+        self.pool_xt_3 = nn.MaxPool1d(3)
+        self.fc1_xt = nn.Linear(2944, output_dim)
+
+        # combined layers
+        self.fc1 = nn.Linear(2*output_dim, 1024)
+        self.fc2 = nn.Linear(1024, 128)
+        self.out = nn.Linear(128, n_output)
+
+        # activation and regularization
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x, edge_index, target, batch, edge_feat):
+        # x, edge_index, batch = data.x, data.edge_index, data.batch
+        #print(x)
+        #print(data.target)
+        x = F.relu(self.conv1(x, edge_index, edge_attr = edge_feat))
+        x = self.bn1(x)
+        x = F.relu(self.conv2(x, edge_index, edge_attr = edge_feat))
+        x = self.bn2(x)
+        x = F.relu(self.conv3(x, edge_index, edge_attr = edge_feat))
+        x = self.bn3(x)
+        x = F.relu(self.conv4(x, edge_index, edge_attr = edge_feat))
+        x = self.bn4(x)
+        x = F.relu(self.conv5(x, edge_index, edge_attr = edge_feat))
+        x = self.bn5(x)
+        x = global_add_pool(x, batch)
+        x = F.relu(self.fc1_xd(x))
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
+
+        # protein input feed-forward:
+        # target = data.target
+        target = target[:,None,:]
+
+        # 1d conv layers
+        conv_xt = self.conv_xt_1(target)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_1(conv_xt)
+        conv_xt = self.conv_xt_2(conv_xt)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_2(conv_xt)
+        conv_xt = self.conv_xt_3(conv_xt)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_3(conv_xt)
+        
+        # flatten
+        xt = conv_xt.view(-1, conv_xt.shape[1] * conv_xt.shape[2])
+        xt = self.fc1_xt(xt)
+        
+        # concat
+        xc = torch.cat((x, xt), 1)
+        # add some dense layers
         xc = self.fc1(xc)
         xc = self.relu(xc)
         xc = self.dropout(xc)
