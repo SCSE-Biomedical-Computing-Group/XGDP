@@ -5,7 +5,7 @@ import nvidia_smi
 from utils_data import *
 
 # training function at each epoch
-def train(model, device, train_loader, optimizer, epoch, log_interval):
+def train(model, device, train_loader, optimizer, epoch, log_interval, return_attention_weights=False):
     print('Training on {} samples...'.format(len(train_loader.dataset)))
     model.train()
     loss_fn = nn.MSELoss()
@@ -30,7 +30,7 @@ def train(model, device, train_loader, optimizer, epoch, log_interval):
                                                                            loss.item()))
     return sum(avg_loss)/len(avg_loss)
 
-def predicting(model, device, loader):
+def predicting(model, device, loader, return_attention_weights = False):
     model.eval()
     total_preds = torch.Tensor()
     total_labels = torch.Tensor()
@@ -41,14 +41,18 @@ def predicting(model, device, loader):
             
             # output, _ = model(data)
             x, x_cell_mut, edge_index, batch_drug, edge_feat = data.x, data.target, data.edge_index.long(), data.batch, data.edge_features
-            output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
+            if return_attention_weights:
+                output, _, attn_weights = model(x, edge_index, x_cell_mut, batch_drug, edge_feat, return_attention_weights)
+            else: 
+                output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
         
             total_preds = torch.cat((total_preds, output.cpu()), 0)
             total_labels = torch.cat((total_labels, data.y.view(-1, 1).cpu()), 0)
+            # attn_weights = attn_weights.cpu().numpy()
     torch.cuda.empty_cache()  ## no grad
     return total_labels.numpy().flatten(),total_preds.numpy().flatten()
 
-def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interval, cuda_name, br_fol, result_folder, model_folder, save_name, do_save = True):
+def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interval, cuda_name, br_fol, result_folder, model_folder, save_name, return_attention_weights, do_save = True):
 
     print('Learning rate: ', lr)
     print('Epochs: ', num_epoch)
@@ -86,7 +90,7 @@ def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interv
         # training the model
         device = torch.device(cuda_name if torch.cuda.is_available() else "cpu")
         print(device)
-        model = modeling(dropout=0.3).to(device)
+        model = modeling().to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         best_mse = 1000
         best_pearson = 1
@@ -98,6 +102,7 @@ def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interv
         pearson_fig_name = 'model_' + save_name + '_' + dataset + '_pearson'
         total_time = 0
         for epoch in range(num_epoch):
+            # torch.cuda.empty_cache()
             start_time = time.time()
             print(f"epoch : {epoch+1}/{num_epoch} ")
 
@@ -123,7 +128,11 @@ def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interv
             G,P = predicting(model, device, val_loader)
             ret = [rmse(G,P),mse(G,P),pearson(G,P),spearman(G,P)]
 
-            G_test,P_test = predicting(model, device, test_loader)
+            if return_attention_weights:
+                G_test,P_test, attn_weights = predicting(model, device, test_loader, return_attention_weights)
+            else:
+                G_test,P_test = predicting(model, device, test_loader)
+                
             ret_test = [rmse(G_test,P_test),mse(G_test,P_test),pearson(G_test,P_test),spearman(G_test,P_test)]
 
             train_losses.append(train_loss)
@@ -137,6 +146,9 @@ def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interv
                         f.write(','.join(map(str,ret)))
                     with open(result_folder + "test_"+ result_file_name,'w') as f:
                         f.write(','.join(map(str,ret_test)))
+                    if return_attention_weights:
+                        np.save(br_fol + '/Saliency/AttnWeight/' + model_st + '.npy', attn_weights)
+                    
                 best_epoch = epoch+1
                 best_mse = ret[1]
                 best_pearson = ret[2]
