@@ -167,7 +167,7 @@ def get_ecfp_identifiers(smiles, radius):
         temp = (atom.GetDegree(), atom.GetTotalValence()-atom.GetTotalNumHs(), atom.GetAtomicNum(), int(atom.GetMass()), atom.GetFormalCharge(), atom.GetTotalNumHs(), int(atom.GetIsAromatic()))
         hs = hash(temp)
         atomIndex_hash_1[atom.GetIdx()] = [hs]
-    for i in range(radius-1):
+    for i in range(radius-1):       # should not minus 1??
         l1 = []
         for atom_idx, hash_stack in atomIndex_hash_1.items():
             this_l = []
@@ -304,7 +304,7 @@ def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = 
     for cnt, item in enumerate(reader):                       ## From csv
                                                                 ## From df3
         # print(item)
-        name = item[1]                                          
+        name = item[0]                                          
         # smile = item[2]                                       ## From csv
         smile = item[-1]                                       ## From csv
 
@@ -503,6 +503,9 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False
 
     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X() 
     drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
+    
+    print('drug number:', len(drug_dict))
+    print('cell line number:', len(cell_dict))
 
     temp_data = []
     bExist = np.zeros((len(drug_dict), len(cell_dict)))
@@ -513,13 +516,22 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False
         ic50 = item[8]    ## IC50
         ic50 = 1 / (1 + pow(math.exp(float(ic50)), -0.1))
         temp_data.append((drug, cell, ic50))
+        
+    print('total length of drug-cellline pair:', len(temp_data))
 
     xd = []
     xc = []
     y = []
     lst_drug = []
     lst_cell = []   
-    random.shuffle(temp_data)
+    
+    # TODO: remove this shuffle operation. 
+    # for mixed test, shuffle will be done in load_data.py, controlling by the random seed
+    # for blind test, no shuffle is needed
+    # random.shuffle(temp_data)
+    
+    n_missing = 0
+    
     for data in temp_data:
         drug, cell, ic50 = data
         if drug in drug_dict and cell in cell_dict:
@@ -529,6 +541,16 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False
             bExist[drug_dict[drug], cell_dict[cell]] = 1  ## (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1 
             lst_drug.append(drug)                         ## appending (str) name of this drug to list lst_drug
             lst_cell.append(cell)                         ## appending (numeric str) this Cosmic sample Id to list lst_cell
+            
+        else:
+            # if drug not in drug_dict:
+            #     print('unrecognized drug:', drug)
+            # if cell not in cell_dict:
+            #     print('unrecognized cell line:', cell)
+                
+            n_missing += 1
+            
+    print('missing pairs:', n_missing)
 
     if (return_names):
         xd, xc, y, dglist, coslist = np.asarray(xd), np.asarray(xc), np.asarray(y), np.asarray(lst_drug), np.asarray(lst_cell)
