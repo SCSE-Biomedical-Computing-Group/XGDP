@@ -50,7 +50,7 @@ class GCNNet(torch.nn.Module):
         self.fc2 = nn.Linear(1024, 128)
         self.out = nn.Linear(128, self.n_output)
 
-    def forward(self, x, edge_index, target, batch, edge_feat, edge_weight = None):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat, edge_weight = None):
         # get graph input
         # edge_weight is only used for decoding
         
@@ -73,9 +73,9 @@ class GCNNet(torch.nn.Module):
 
         # get protein input
         # target = data.target
-        target = target[:,None,:]
+        x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
-        conv_xt = self.conv_xt_1(target)
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -100,7 +100,7 @@ class GCNNet(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        return out
     
     
 class GATNet(torch.nn.Module):
@@ -212,7 +212,7 @@ class GATv2Net(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat, return_attention_weights = False):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat, return_attention_weights = False):
         # graph input feed-forward
         # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
         # print(data.x.shape)
@@ -234,9 +234,9 @@ class GATv2Net(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        target = target[:,None,:]
+        x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
-        conv_xt = self.conv_xt_1(target)
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -265,7 +265,7 @@ class GATv2Net(torch.nn.Module):
         if return_attention_weights:
             return out, x, attn_weights
         else:
-            return out, x
+            return out
 
 class GATNet_E(torch.nn.Module):
     def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25,
@@ -295,7 +295,7 @@ class GATNet_E(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat, return_attention_weights = False):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat, return_attention_weights = False):
         '''
         x: feature matrix of molecular graph
         target: gene mutation data
@@ -323,9 +323,9 @@ class GATNet_E(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        target = target[:,None,:]
+        x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
-        conv_xt = self.conv_xt_1(target)
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -354,7 +354,7 @@ class GATNet_E(torch.nn.Module):
         if return_attention_weights:
             return out, x, attn_weights
         else:
-            return out, x
+            return out
     
     
 class SAGENet(torch.nn.Module):
@@ -392,7 +392,7 @@ class SAGENet(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat):
         # get graph input
         # x, edge_index, batch = data.x, data.edge_index, data.batch
 
@@ -413,8 +413,8 @@ class SAGENet(torch.nn.Module):
 
         # get protein input
         # target = data.target
-        target = target[:,None,:]
-        conv_xt = self.conv_xt_1(target)
+        x_cell_mut = x_cell_mut[:,None,:]
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -440,7 +440,7 @@ class SAGENet(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        return out
     
     
 class GINNet(torch.nn.Module):
@@ -498,7 +498,7 @@ class GINNet(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat):
         # x, edge_index, batch = data.x, data.edge_index, data.batch
         #print(x)
         #print(data.target)
@@ -519,10 +519,10 @@ class GINNet(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        target = target[:,None,:]
+        x_cell_mut = x_cell_mut[:,None,:]
 
         # 1d conv layers
-        conv_xt = self.conv_xt_1(target)
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -547,7 +547,7 @@ class GINNet(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        return out
     
     
 class GINENet(torch.nn.Module):
@@ -605,7 +605,7 @@ class GINENet(torch.nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
 
-    def forward(self, x, edge_index, target, batch, edge_feat):
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat):
         # x, edge_index, batch = data.x, data.edge_index, data.batch
         #print(x)
         #print(data.target)
@@ -626,10 +626,10 @@ class GINENet(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        target = target[:,None,:]
+        x_cell_mut = x_cell_mut[:,None,:]
 
         # 1d conv layers
-        conv_xt = self.conv_xt_1(target)
+        conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
         conv_xt = self.conv_xt_2(conv_xt)
@@ -654,4 +654,4 @@ class GINENet(torch.nn.Module):
         xc = self.dropout(xc)
         out = self.out(xc)
         out = nn.Sigmoid()(out)
-        return out, x
+        return out
