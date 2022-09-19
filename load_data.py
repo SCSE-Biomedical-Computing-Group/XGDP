@@ -63,7 +63,7 @@ xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_cell_matrix_X(do_ordinary_atom_feat, 
 
 # for blind test (drugs appearing in the testing set do not appear in the training set), set randomize = False
 randomize = True
-seed = 19871729 ## 19871729
+seed = 19871731 ## start from 19871729, add one each time for multiple testing
 
 if (randomize):
     np.random.seed(seed)
@@ -74,6 +74,12 @@ if (randomize):
 
     np.random.seed(seed)
     np.random.shuffle(y_X)
+    
+    np.random.seed(seed)
+    np.random.shuffle(dgl)
+    
+    np.random.seed(seed)
+    np.random.shuffle(cosl)
 
 size_X = int(xd_X.shape[0] * 0.8)
 size1_X = int(xd_X.shape[0] * 0.9)

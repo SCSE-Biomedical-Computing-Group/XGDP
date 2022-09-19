@@ -305,8 +305,8 @@ def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = 
                                                                 ## From df3
         # print(item)
         name = item[0]                                          
-        # smile = item[2]                                       ## From csv
-        smile = item[-1]                                       ## From csv
+        smile = item[2]                                       ## From csv
+        # smile = item[-1]                                       ## From csv
 
         # skip the Cisplatin drug
         if (smile == "N.N.[Cl-].[Cl-].[Pt+2]"):
