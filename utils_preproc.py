@@ -287,7 +287,7 @@ def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl = None, do_e
     else:
         return c_size, features, edge_index, g
 
-def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = None, do_edge_features = False, do_atom_ecfp = False, ecfp_radius = None, use_radius = None, folder = "data/" ):
+def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = None, do_edge_features = False, do_atom_ecfp = False, ecfp_radius = None, use_radius = None, folder = "data/GDSC/" ):
     """
       Output :
         (dictionary) drug_dict : Keys - (str) name of drug, Values - (int) index/position of drug in drug_smile
@@ -336,7 +336,7 @@ def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = 
 
     return drug_dict, drug_smile, smile_graph
 
-def save_cell_mut_matrix_X(folder = 'data/'):
+def save_cell_mut_matrix_X(folder = 'data/GDSC/'):
     """
     PANCANCER_Genetic_feature.csv
     0                1                 2           3          4         5                6
@@ -384,7 +384,7 @@ def save_cell_mut_matrix_X(folder = 'data/'):
     return cell_dict, cell_feature, matrix_list, mut_dict
 
 
-def save_cell_mut_matrix_XO(folder = 'data/'):
+def save_cell_mut_matrix_XO(folder = 'data/GDSC/'):
     """
  Output :
         (dictionary) cell_dict : Keys - (str) cosmic_sample_id, Values - (int) index/position of the key (cosmic_sample_id) in uniquely sorted list of cosmic_sample_id values
@@ -429,74 +429,8 @@ def save_cell_mut_matrix_XO(folder = 'data/'):
 
     return cell_dict, cell_feature
 
-'''
-def save_mix_drug_cell_matrix_X(do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, folder = 'data/'):
-    f = open(folder + "PANCANCER_IC.csv")
-    reader = csv.reader(f)
-    next(reader)
-
-    cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X()
-    drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
     
-    # print(cell_dict)
-    # print(drug_dict)
-    # print(cell_feature)
-    # print(drug_smile)
-
-    temp_data = []
-    bExist = np.zeros((len(drug_dict), len(cell_dict)))
-
-    for item in reader:
-        drug = item[0]    ## Drug name
-        cell = item[3]    ## Cosmic sample Id
-        ic50 = item[8]    ## IC50
-        ic50 = 1 / (1 + pow(math.exp(float(ic50)), -0.1))
-        temp_data.append((drug, cell, ic50))
-
-    xd = []
-    xc = []
-    y = []
-    lst_drug = []
-    lst_cell = []
-    random.shuffle(temp_data)
-    # print(temp_data)
-    for data in temp_data:
-        drug, cell, ic50 = data
-        # print(drug, cell, ic50)
-        if drug in drug_dict and cell in cell_dict:
-            # print(drug_smile[drug_dict[drug]])
-            xd.append(drug_smile[drug_dict[drug]])        ## appending the smile of the drug into list xd
-            xc.append(cell_feature[cell_dict[cell]])      ## appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
-            y.append(ic50)                                ## appending (int) ic50 value of that smile to list y
-            bExist[drug_dict[drug], cell_dict[cell]] = 1  ## (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1
-            lst_drug.append(drug)                         ## appending (str) name of this drug to list lst_drug
-            lst_cell.append(cell)                         ## appending (numeric str) this Cosmic sample Id to list lst_cell
-
-    xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)
-    print(xd)
-
-
-    size = int(xd.shape[0] * 0.8)
-    size1 = int(xd.shape[0] * 0.9)
-    xd_train = xd[:size]
-    xd_val = xd[size:size1]
-    xd_test = xd[size1:]
-
-    xc_train = xc[:size]
-    xc_val = xc[size:size1]
-    xc_test = xc[size1:]
-
-    y_train = y[:size]
-    y_val = y[size:size1]
-    y_test = y[size1:]
-
-    dataset = 'GDSC'
-    print('preparing ', dataset + '_train.pt in pytorch format!')
-
-    return xd, xc, y
-'''
-    
-def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, return_names = True, folder = 'data/'):
+def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, return_names = True, folder = 'data/GDSC/'):
     f = open(folder + "PANCANCER_IC.csv")
     reader = csv.reader(f)
     next(reader)
@@ -525,7 +459,7 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False
     lst_drug = []
     lst_cell = []   
     
-    # TODO: remove this shuffle operation. 
+    # TODO: remove this shuffle operation. (finished)
     # for mixed test, shuffle will be done in load_data.py, controlling by the random seed
     # for blind test, no shuffle is needed
     # random.shuffle(temp_data)
@@ -566,3 +500,107 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False
         return xd, xc, y
     
 
+# functions to use gene expression data from CCLE
+def preproc_gene_expr(ccle_expr, meta_data):
+    # remove genes with low expression levels and select top 1000 genes according to variance
+    ccle_expr = ccle_expr.loc[:, (ccle_expr==0).sum()<ccle_expr.shape[0]*0.1]
+    expr_var = ccle_expr.var()
+    expr_var_arr = np.array(expr_var)
+    gene_rnk = np.flip(np.argsort(expr_var_arr))
+    filtered_expr = ccle_expr.iloc[:, gene_rnk[:1000]]
+    
+    meta_data = meta_data[meta_data['COSMICID'].notna()]
+    expr_data = filtered_expr.merge(meta_data, left_index=True, right_on='DepMap_ID')
+    expr_data.drop('DepMap_ID', axis=1, inplace=True)
+
+    expr_data['COSMICID'] = expr_data['COSMICID'].astype(int).astype(str)
+    expr_data.set_index('COSMICID', inplace=True)
+    
+    return expr_data
+
+
+def save_gene_expr_matrix_X(folder='data/CCLE/'):
+    df = pd.read_csv(folder + 'CCLE_expression.csv', index_col=0, header=0)
+    meta_df = pd.read_csv(folder + 'sample_info.csv', header=0, usecols=['DepMap_ID', 'COSMICID'])
+    processed_df = preproc_gene_expr(df, meta_df)
+    
+    cells = processed_df.index.values
+    cell_dict = dict()
+    for c in cells:
+        idx = np.where(cells==c)[0]
+        cell_dict[c] = idx
+
+    cell_feature = processed_df.values
+    
+    return cell_dict, cell_feature
+
+
+def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat = True, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, return_names = True, folder = 'data/GDSC/'):
+    f = open(folder + "PANCANCER_IC.csv")
+    reader = csv.reader(f)
+    next(reader)
+
+#     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X() 
+    cell_dict, cell_feature = save_gene_expr_matrix_X()
+    drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
+    
+    print('drug number:', len(drug_dict))
+    print('cell line number:', len(cell_dict))
+
+    temp_data = []
+    bExist = np.zeros((len(drug_dict), len(cell_dict)))
+
+    for item in reader:
+        drug = item[0]    ## Drug name
+        cell = item[3]    ## Cosmic sample Id
+        ic50 = item[8]    ## IC50
+        ic50 = 1 / (1 + pow(math.exp(float(ic50)), -0.1))
+        temp_data.append((drug, cell, ic50))
+        
+    print('total length of drug-cellline pair:', len(temp_data))
+
+    xd = []
+    xc = []
+    y = []
+    lst_drug = []
+    lst_cell = []   
+    
+    # TODO: remove this shuffle operation. (finished)
+    # for mixed test, shuffle will be done in load_data.py, controlling by the random seed
+    # for blind test, no shuffle is needed
+    # random.shuffle(temp_data)
+    
+    n_missing = 0
+    
+    for data in temp_data:
+        drug, cell, ic50 = data
+        if drug in drug_dict and cell in cell_dict:
+            xd.append(drug_smile[drug_dict[drug]])        ## appending the smile of the drug into list xd
+            xc.append(cell_feature[cell_dict[cell]])      ## appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
+            y.append(ic50)                                ## appending (int) ic50 value of that smile to list y
+            bExist[drug_dict[drug], cell_dict[cell]] = 1  ## (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1 
+            lst_drug.append(drug)                         ## appending (str) name of this drug to list lst_drug
+            lst_cell.append(cell)                         ## appending (numeric str) this Cosmic sample Id to list lst_cell
+            
+        else:
+            # if drug not in drug_dict:
+            #     print('unrecognized drug:', drug)
+            # if cell not in cell_dict:
+            #     print('unrecognized cell line:', cell)
+                
+            n_missing += 1
+            
+    print('missing pairs:', n_missing)
+
+    if (return_names):
+        xd, xc, y, dglist, coslist = np.asarray(xd), np.asarray(xc), np.asarray(y), np.asarray(lst_drug), np.asarray(lst_cell)
+    else:
+        xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)  
+
+    dataset = 'GDSC'
+    print('preparing ', dataset + '_train.pt in pytorch format!')                         
+
+    if (return_names):
+        return xd, xc, y, dglist, coslist
+    else:
+        return xd, xc, y

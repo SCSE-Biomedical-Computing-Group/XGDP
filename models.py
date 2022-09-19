@@ -23,7 +23,7 @@ TODO: (already done)
 
 # change num_features_xd into 78 for ordinary atom features (benchmark)
 class GCNNet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=78, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=334, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
 
         super(GCNNet, self).__init__()
 
@@ -44,7 +44,8 @@ class GCNNet(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4224, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -74,7 +75,11 @@ class GCNNet(torch.nn.Module):
 
         # get protein input
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # print(x_cell_mut.shape)
+
+        # add this line for CNV data, remove for gene expr data
+        # x_cell_mut = x_cell_mut[:,None,:]
+
         # 1d conv layers
         conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
@@ -105,7 +110,7 @@ class GCNNet(torch.nn.Module):
     
     
 class GATNet(torch.nn.Module):
-    def __init__(self, num_features_xd=78, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet, self).__init__()
 
         # graph layers
@@ -120,7 +125,8 @@ class GATNet(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4244, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -150,7 +156,7 @@ class GATNet(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
         conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
@@ -202,7 +208,8 @@ class GATv2Net(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4224, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -235,7 +242,7 @@ class GATv2Net(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
         conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
@@ -285,7 +292,8 @@ class GATNet_E(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4224, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -324,7 +332,7 @@ class GATNet_E(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # x_cell_mut = x_cell_mut[:,None,:]
         # 1d conv layers
         conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
@@ -382,7 +390,8 @@ class SAGENet(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4224, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -414,7 +423,7 @@ class SAGENet(torch.nn.Module):
 
         # get protein input
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # x_cell_mut = x_cell_mut[:,None,:]
         conv_xt = self.conv_xt_1(x_cell_mut)
         conv_xt = F.relu(conv_xt)
         conv_xt = self.pool_xt_1(conv_xt)
@@ -445,7 +454,7 @@ class SAGENet(torch.nn.Module):
     
     
 class GINNet(torch.nn.Module):
-    def __init__(self, n_output=1,num_features_xd=78, num_features_xt=25,
+    def __init__(self, n_output=1,num_features_xd=334, num_features_xt=25,
                  n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
 
         super(GINNet, self).__init__()
@@ -488,7 +497,8 @@ class GINNet(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4224, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -520,7 +530,7 @@ class GINNet(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # x_cell_mut = x_cell_mut[:,None,:]
 
         # 1d conv layers
         conv_xt = self.conv_xt_1(x_cell_mut)
@@ -595,7 +605,8 @@ class GINENet(torch.nn.Module):
         self.pool_xt_2 = nn.MaxPool1d(3)
         self.conv_xt_3 = nn.Conv1d(in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
-        self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        self.fc1_xt = nn.Linear(4224, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -627,7 +638,7 @@ class GINENet(torch.nn.Module):
 
         # protein input feed-forward:
         # target = data.target
-        x_cell_mut = x_cell_mut[:,None,:]
+        # x_cell_mut = x_cell_mut[:,None,:]
 
         # 1d conv layers
         conv_xt = self.conv_xt_1(x_cell_mut)

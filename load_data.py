@@ -20,7 +20,7 @@ import utils_preproc
 import utils_data
 # import models_deprecated 
 from utils_data import *
-from utils_preproc import load_drug_smile_X, save_mix_drug_cell_matrix_X
+from utils_preproc import load_drug_smile_X, save_mix_drug_cell_matrix_X, save_mix_drug_geneexpr_matrix_X
 import sys
 
 branch = sys.argv[1]
@@ -51,19 +51,20 @@ do_ordinary_atom_feat = True
 do_mol_ecfp = False
 fpl = None
 do_edge_features = True
-do_atom_ecfp = False
-# do_atom_ecfp = True
+# do_atom_ecfp = False
+do_atom_ecfp = True
 ecfp_radius = 4   # this is actually radius + 1, set it to 4 for ECFP6  (256 features)
 use_radius = None
 
 drug_dict_X, drug_smile_X, smile_graph_X = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
-xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_cell_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
+# xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_cell_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
+xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
 
 # print(smile_graph_X)
 
 # for blind test (drugs appearing in the testing set do not appear in the training set), set randomize = False
 randomize = True
-seed = 19871731 ## start from 19871729, add one each time for multiple testing
+seed = 19871730 ## start from 19871729, add one each time for multiple testing
 
 if (randomize):
     np.random.seed(seed)
