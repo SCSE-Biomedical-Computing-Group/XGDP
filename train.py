@@ -92,12 +92,12 @@ os.makedirs(model_folder, exist_ok=True)
 #     exit
 modeling = [GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet][model_type]
     
-train_batch = 1024
-val_batch = 1024
-test_batch = 1024
-# train_batch = 512
-# val_batch = 512
-# test_batch = 512
+# train_batch = 1024
+# val_batch = 1024
+# test_batch = 1024
+train_batch = 512
+val_batch = 512
+test_batch = 512
 
 lr = 1e-4
 num_epoch = 300
