@@ -15,14 +15,15 @@ from torch_geometric.nn import global_add_pool
 '''
 
 '''
-TODO: 
+TODO: (already done)
     1. align all models' forward arguments with GATNet (make sure batch is the 3rd one due to gnn_explainer's implementation)
     2. remove x in the return (tuple cannot be accepted by gnn_explainer)
+    3. change the output and input in utils_train.py correspondingly
 '''
 
 # change num_features_xd into 78 for ordinary atom features (benchmark)
 class GCNNet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=334, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=78, num_features_xt=25, output_dim=128, dropout=0.5):  ## qwe
 
         super(GCNNet, self).__init__()
 
@@ -104,7 +105,7 @@ class GCNNet(torch.nn.Module):
     
     
 class GATNet(torch.nn.Module):
-    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
+    def __init__(self, num_features_xd=78, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet, self).__init__()
 
         # graph layers
@@ -444,7 +445,7 @@ class SAGENet(torch.nn.Module):
     
     
 class GINNet(torch.nn.Module):
-    def __init__(self, n_output=1,num_features_xd=334, num_features_xt=25,
+    def __init__(self, n_output=1,num_features_xd=78, num_features_xt=25,
                  n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
 
         super(GINNet, self).__init__()

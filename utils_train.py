@@ -16,7 +16,8 @@ def train(model, device, train_loader, optimizer, epoch, log_interval, return_at
         
         # output, _ = model(data)
         x, x_cell_mut, edge_index, batch_drug, edge_feat = data.x, data.target, data.edge_index.long(), data.batch, data.edge_features
-        output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
+        # output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
+        output = model(x, edge_index, batch_drug, x_cell_mut, edge_feat)
         
         loss = loss_fn(output, data.y.view(-1, 1).float().to(device))
         loss.backward()
@@ -42,9 +43,11 @@ def predicting(model, device, loader, return_attention_weights = False):
             # output, _ = model(data)
             x, x_cell_mut, edge_index, batch_drug, edge_feat = data.x, data.target, data.edge_index.long(), data.batch, data.edge_features
             if return_attention_weights:
-                output, _, attn_weights = model(x, edge_index, x_cell_mut, batch_drug, edge_feat, return_attention_weights)
+                # output, _, attn_weights = model(x, edge_index, x_cell_mut, batch_drug, edge_feat, return_attention_weights)
+                output, attn_weights = model(x, edge_index, batch_drug, x_cell_mut, edge_feat, return_attention_weights)
             else: 
-                output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
+                # output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
+                output = model(x, edge_index, batch_drug, x_cell_mut, edge_feat)
         
             total_preds = torch.cat((total_preds, output.cpu()), 0)
             total_labels = torch.cat((total_labels, data.y.view(-1, 1).cpu()), 0)
