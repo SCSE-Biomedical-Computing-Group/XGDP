@@ -49,11 +49,11 @@ test_loader = DataLoader(test_data, batch_size=test_batch, shuffle=False)
 def model_forward(input_mask, data):
     # batch = data.batch
     if decoding_type == 'Atom':
-        output, _ = model(input_mask, data.edge_index, data.target, data.batch, data.edge_features)
+        output = model(input_mask, data.edge_index, data.batch, data.target, data.edge_features)
     elif decoding_type == 'Bonds':  # this is only supported by GCN
-        output, _ = model(data.x, data.edge_index, data.target, data.batch, data.edge_features, input_mask)
+        output = model(data.x, data.edge_index, data.batch, data.target, data.edge_features, input_mask)
     elif decoding_type == 'CellLine':
-        output, _ = model(data.x, data.edge_index, input_mask, data.batch, data.edge_features)
+        output = model(data.x, data.edge_index, data.batch, input_mask, data.edge_features)
     else:
         print('wrong decoding type!')
         exit    
@@ -64,13 +64,17 @@ def model_forward(input_mask, data):
 def explain(data, device, decoding_type):
     data = data.to(device)
     if decoding_type == 'Atom':
-        input_mask = torch.ones(data.x.shape[0], data.x.shape[1]).requires_grad_(True).to(device)
+        # input_mask = torch.ones(data.x.shape[0], data.x.shape[1]).requires_grad_(True).to(device)
+        input_mask = data.x
         internal_bs = data.x.shape[0]
     elif decoding_type == 'Bonds':
         input_mask = torch.ones(data.edge_index.shape[1]).requires_grad_(True).to(device)
         internal_bs = data.edge_index.shape[1]
     elif decoding_type == 'CellLine':
-        input_mask = torch.ones(data.target.shape[0], data.target.shape[1]).requires_grad_(True).to(device)
+        # cnv features have 2 dim, gene expr features have 3 dim
+        # input_mask = torch.ones(data.target.shape[0], data.target.shape[1]).requires_grad_(True).to(device)
+        # input_mask = torch.ones(data.target.shape[0], data.target.shape[1], data.target.shape[2]).requires_grad_(True).to(device)
+        input_mask = data.target
         internal_bs = data.target.shape[0]
     else:
         print('wrong decoding type!')
@@ -131,7 +135,7 @@ def explain_cell_line(data, device):
     return mask_drug
 '''
 
-save_path = os.path.join(branch_folder, 'Saliency/' + decoding_type + '/' + model_name + '/')
+save_path = os.path.join(branch_folder, 'Saliency/IG/' + decoding_type + '/' + model_name + '/')
 # save_path_drug = os.path.join(branch_folder, 'Saliency/Drug/' + model_name + '/')
 # save_path_cell = os.path.join(branch_folder, 'Saliency/CellLine/' + model_name + '/')
 os.makedirs(save_path, exist_ok=True)
