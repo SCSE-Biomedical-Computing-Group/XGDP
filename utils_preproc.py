@@ -531,8 +531,9 @@ def save_gene_expr_matrix_X(folder='data/CCLE/'):
         cell_dict[c] = idx
 
     cell_feature = processed_df.values
+    gene_list = processed_df.columns
     
-    return cell_dict, cell_feature
+    return cell_dict, cell_feature, gene_list
 
 
 def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat = True, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, return_names = True, folder = 'data/GDSC/'):
@@ -541,7 +542,7 @@ def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat = True, do_mol_ecfp=Fa
     next(reader)
 
 #     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X() 
-    cell_dict, cell_feature = save_gene_expr_matrix_X()
+    cell_dict, cell_feature, _ = save_gene_expr_matrix_X()
     drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
     
     print('drug number:', len(drug_dict))
