@@ -156,6 +156,6 @@ for idx, data in enumerate(test_loader):
     np.save(save_path + str(idx) + '_' + drug_name + '_' + cell_line_name + '.npy', mask_drug)
     # np.save(save_path_cell + str(idx) + '.npy', mask_cell)
     
-    del data
-    torch.cuda.empty_cache()
+    # del data
+    # torch.cuda.empty_cache()
     
