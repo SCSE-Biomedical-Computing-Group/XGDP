@@ -1,6 +1,4 @@
 # Training
-from email import parser
-from pyexpat import model
 import pandas as pd
 import pubchempy as pcp
 from collections import Counter
@@ -25,7 +23,6 @@ import numpy as np
 import pandas as pd
 import sys, os
 from random import shuffle
-from sympy import arg
 import torch
 import torch.nn as nn
 import datetime
@@ -34,7 +31,6 @@ import nvidia_smi
 
 import utils_preproc
 import utils_data
-import models_deprecated
 # import load_data
 
 from utils_train import main
