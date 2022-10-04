@@ -675,7 +675,7 @@ class WIRGATNet(torch.nn.Module):
         super(WIRGATNet, self).__init__()
 
         # graph layers
-        self.gcn1 = RGATConv(num_features_xd, num_features_xd, num_relations=4, attention_mechanism='within-relation', heads=1, dropout=dropout)
+        self.gcn1 = RGATConv(num_features_xd, num_features_xd, num_relations=4, attention_mechanism='within-relation', heads=5, dropout=dropout)
         self.gcn2 = RGATConv(num_features_xd * 1, output_dim, num_relations=4, attention_mechanism='within-relation', dropout=dropout)
         self.fc_g1 = nn.Linear(output_dim, output_dim)
 
