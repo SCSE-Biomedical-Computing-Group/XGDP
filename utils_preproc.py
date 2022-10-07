@@ -24,7 +24,8 @@ import sys
 
 import numpy as np
 import pandas as pd
-import sys, os
+import sys
+import os
 from random import shuffle
 import torch
 import torch.nn as nn
@@ -39,61 +40,74 @@ from utils_data import *
 # from torch_geometric.data import DataLoader         # pyg < 2, seems also works on pyg >= 2.0
 
 
-IPythonConsole.ipython_useSVG=True  #< set this to False if you want PNGs instead of SVGs
+# < set this to False if you want PNGs instead of SVGs
+IPythonConsole.ipython_useSVG = True
+
+
 class ECFP6:
     def __init__(self, smiles):
         self.mols = [Chem.MolFromSmiles(i) for i in smiles]
         self.smiles = smiles
 
-    def mol2fp(self, mol, fp_length, radius = 3):
-        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius = radius, nBits = fp_length)
+    def mol2fp(self, mol, fp_length, radius=3):
+        fp = AllChem.GetMorganFingerprintAsBitVect(
+            mol, radius=radius, nBits=fp_length)
         array = np.zeros((1,))
         DataStructs.ConvertToNumpyArray(fp, array)
         return array
 
-    def compute_ECFP6(self, fp_length, name = None, generate_df = True):
+    def compute_ECFP6(self, fp_length, name=None, generate_df=True):
         bit_headers = ['bit' + str(i) for i in range(fp_length)]
-        arr = np.empty((0,fp_length), int).astype(int)
+        arr = np.empty((0, fp_length), int).astype(int)
         for i in self.mols:
             fp = self.mol2fp(i, fp_length)
             arr = np.vstack((arr, fp))
         if (not generate_df):
             return np.asarray(arr).astype(int)
-        df_ecfp6 = pd.DataFrame(np.asarray(arr).astype(int),columns=bit_headers)
+        df_ecfp6 = pd.DataFrame(np.asarray(
+            arr).astype(int), columns=bit_headers)
         df_ecfp6.insert(loc=0, column='smiles', value=self.smiles)
         if name != None:
             df_ecfp6.to_csv(name[:-4]+'_ECFP6.csv', index=False)
-        
+
         return df_ecfp6
+
 
 def mol_with_atom_index(mol):
     for atom in mol.GetAtoms():
         atom.SetAtomMapNum(atom.GetIdx())
     return mol
 
+
 def ctoint(_c):
-  return int(str(_c)[9:-1])
+    return int(str(_c)[9:-1])
+
 
 def drugnameToSmiles(dn):
-  return pcp.get_compounds(dn, 'name')[0].isomeric_smiles
+    return pcp.get_compounds(dn, 'name')[0].isomeric_smiles
 
-def show_structure(sm, show_smiles = False):
-  if (show_smiles):
-    print(f"Smiles : {sm}")
-  mol = Chem.MolFromSmiles(sm)
-  return mol
+
+def show_structure(sm, show_smiles=False):
+    if (show_smiles):
+        print(f"Smiles : {sm}")
+    mol = Chem.MolFromSmiles(sm)
+    return mol
+
 
 def get_ecfp_sparsity(sml, fpl):
-    tmp = ECFP6(sml).compute_ECFP6(fp_length = fpl, generate_df=False)
-    return round(100*np.sum(tmp)/(tmp.shape[0]*tmp.shape[1]) , 2)
+    tmp = ECFP6(sml).compute_ECFP6(fp_length=fpl, generate_df=False)
+    return round(100*np.sum(tmp)/(tmp.shape[0]*tmp.shape[1]), 2)
+
 
 def norm_ic50(ic):
     return 1 / (1 + pow(math.exp(float(ic)), -0.1))
 
+
 def denorm_ic50(ic):
     return -10*math.log((1-ic)/ic)
 
-def predict_this(mdl, sml, cid, do_ECFP = False, fpl = None):
+
+def predict_this(mdl, sml, cid, do_ECFP=False, fpl=None):
     cell_dict_X, cell_feature_X = save_cell_mut_matrix_XO()
     drug_dict_X, drug_smile_X, comp_smg = load_drug_smile_X(do_ECFP, fpl)
 
@@ -104,9 +118,11 @@ def predict_this(mdl, sml, cid, do_ECFP = False, fpl = None):
     y_arr = np.array([0])
     smg = {sml: comp_smg[sml]}
 
-    pr = TestbedDataset(root='', dataset="", xd=sml_arr, xt=mut_arr, y=y_arr, smile_graph=smg, testing = True).process(sml_arr, mut_arr, y_arr,smg)
+    pr = TestbedDataset(root='', dataset="", xd=sml_arr, xt=mut_arr, y=y_arr,
+                        smile_graph=smg, testing=True).process(sml_arr, mut_arr, y_arr, smg)
 
     return denorm_ic50(float(mdl.forward(pr[0])[0][0][0]))
+
 
 def list_difference(a, b):
     both = []
@@ -132,23 +148,28 @@ def list_difference(a, b):
                 in_a.append(q)
     return in_a, in_b, both
 
+
 def atom_features_X(atom):
-    return np.array(one_of_k_encoding_unk_X(atom.GetSymbol(),['C', 'N', 'O', 'S', 'F', 'Si', 'P', 'Cl', 'Br', 'Mg', 'Na','Ca', 'Fe', 'As', 'Al', 'I', 'B', 'V', 'K', 'Tl', 'Yb','Sb', 'Sn', 'Ag', 'Pd', 'Co', 'Se', 'Ti', 'Zn', 'H','Li', 'Ge', 'Cu', 'Au', 'Ni', 'Cd', 'In', 'Mn', 'Zr','Cr', 'Pt', 'Hg', 'Pb', 'Unknown']) +
-                    one_of_k_encoding_X(atom.GetDegree(), [0, 1, 2, 3, 4, 5, 6,7,8,9,10]) +
-                    one_of_k_encoding_unk_X(atom.GetTotalNumHs(), [0, 1, 2, 3, 4, 5, 6,7,8,9,10]) +
-                    one_of_k_encoding_unk_X(atom.GetImplicitValence(), [0, 1, 2, 3, 4, 5, 6,7,8,9,10]) +
+    return np.array(one_of_k_encoding_unk_X(atom.GetSymbol(), ['C', 'N', 'O', 'S', 'F', 'Si', 'P', 'Cl', 'Br', 'Mg', 'Na', 'Ca', 'Fe', 'As', 'Al', 'I', 'B', 'V', 'K', 'Tl', 'Yb', 'Sb', 'Sn', 'Ag', 'Pd', 'Co', 'Se', 'Ti', 'Zn', 'H', 'Li', 'Ge', 'Cu', 'Au', 'Ni', 'Cd', 'In', 'Mn', 'Zr', 'Cr', 'Pt', 'Hg', 'Pb', 'Unknown']) +
+                    one_of_k_encoding_X(atom.GetDegree(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) +
+                    one_of_k_encoding_unk_X(atom.GetTotalNumHs(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) +
+                    one_of_k_encoding_unk_X(atom.GetImplicitValence(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) +
                     [atom.GetIsAromatic()])
+
 
 def one_of_k_encoding_X(x, allowable_set):
     if x not in allowable_set:
-        raise Exception("input {0} not in allowable set{1}:".format(x, allowable_set))
+        raise Exception(
+            "input {0} not in allowable set{1}:".format(x, allowable_set))
     return list(map(lambda s: x == s, allowable_set))
+
 
 def one_of_k_encoding_unk_X(x, allowable_set):
     """Maps inputs not in the allowable set to the last element."""
     if x not in allowable_set:
         x = allowable_set[-1]
     return list(map(lambda s: x == s, allowable_set))
+
 
 def get_ecfp_identifiers(smiles, radius):
     """
@@ -164,7 +185,8 @@ def get_ecfp_identifiers(smiles, radius):
     atomIndex_hash_1 = {}
 
     for atom in mol.GetAtoms():
-        temp = (atom.GetDegree(), atom.GetTotalValence()-atom.GetTotalNumHs(), atom.GetAtomicNum(), int(atom.GetMass()), atom.GetFormalCharge(), atom.GetTotalNumHs(), int(atom.GetIsAromatic()))
+        temp = (atom.GetDegree(), atom.GetTotalValence()-atom.GetTotalNumHs(), atom.GetAtomicNum(),
+                int(atom.GetMass()), atom.GetFormalCharge(), atom.GetTotalNumHs(), int(atom.GetIsAromatic()))
         hs = hash(temp)
         atomIndex_hash_1[atom.GetIdx()] = [hs]
     for i in range(radius-1):       # should not minus 1??
@@ -180,11 +202,12 @@ def get_ecfp_identifiers(smiles, radius):
             for neigh in this_atom.GetNeighbors():
                 neigh_idx = neigh.GetIdx()
                 bd = [b for b in this_atom.GetBonds()]
-                this_bond = mol.GetBondBetweenAtoms(this_atom.GetIdx(), (neigh.GetIdx()))
+                this_bond = mol.GetBondBetweenAtoms(
+                    this_atom.GetIdx(), (neigh.GetIdx()))
                 this_bond_type = str(this_bond.GetBondType())
                 this_bnum = bond_types.index(this_bond_type) + 1
                 neighs_l.append((this_bnum, atomIndex_hash_1[neigh_idx][i]))
-            neighs_l.sort(key = lambda x: x[1])
+            neighs_l.sort(key=lambda x: x[1])
             for tup in neighs_l:
                 this_l.append(tup[0])
                 this_l.append(tup[1])
@@ -192,7 +215,8 @@ def get_ecfp_identifiers(smiles, radius):
             atomIndex_hash_1[atom_idx].append(hash(tuple(this_l)))
     return atomIndex_hash_1
 
-def get_ecfp_node_features(smiles, radius, use_radius = None, do_ordinary_atom_feat = False):
+
+def get_ecfp_node_features(smiles, radius, use_radius=None, do_ordinary_atom_feat=False):
     """
         Returns the ECFP atom features for each atom in given smiles in form of a list of numpy arrays
         Input:
@@ -214,8 +238,9 @@ def get_ecfp_node_features(smiles, radius, use_radius = None, do_ordinary_atom_f
             bin_len = len(bin_ecfp)
             for bit in range(bin_len, int((i+1)*64)):
                 bin_ecfp = bin_ecfp + "0"
-        feature = np.array([int(char) for char in bin_ecfp]) ## .astype("uint8")
-        
+        feature = np.array([int(char)
+                           for char in bin_ecfp])  # .astype("uint8")
+
         if do_ordinary_atom_feat:
             mol = Chem.MolFromSmiles(smiles)
             atom = mol.GetAtoms()[atomidx]
@@ -227,7 +252,8 @@ def get_ecfp_node_features(smiles, radius, use_radius = None, do_ordinary_atom_f
         features.append(feature)
     return features
 
-def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl = None, do_edge_features = False, do_atom_ecfp = False, ecfp_radius = 3, use_radius = None, use_relational_edge = False):
+
+def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=3, use_radius=None, use_relational_edge=False):
     '''
         Inputs:
             smile: SMILES vector of drug
@@ -244,7 +270,8 @@ def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl = None, do_e
 
     if (do_atom_ecfp):
         # atom level ecfp features
-        features = get_ecfp_node_features(smile, ecfp_radius, use_radius, do_ordinary_atom_feat)
+        features = get_ecfp_node_features(
+            smile, ecfp_radius, use_radius, do_ordinary_atom_feat)
     else:
         # benchmark atom features (symbol, degrees, ...)
         # if do_mol_ecfp, append the mol-level ecfp as well
@@ -253,7 +280,8 @@ def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl = None, do_e
             feature = atom_features_X(atom)
             if (do_mol_ecfp):
                 ecfp6_descriptor = ECFP6([smile])
-                this_ecfp = ecfp6_descriptor.compute_ECFP6(fpl, generate_df=False)[0]
+                this_ecfp = ecfp6_descriptor.compute_ECFP6(
+                    fpl, generate_df=False)[0]
                 feature = np.append(feature, this_ecfp, 0)
 
             # features.append( feature / sum(feature) ) ## Normalise
@@ -265,18 +293,21 @@ def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl = None, do_e
     for bond in mol.GetBonds():
         edges.append([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
 
-
         if (do_edge_features):
-            this_feat = [0 for q in range(4)]
-            q = ['SINGLE', 'DOUBLE', 'TRIPLE', 'AROMATIC'].index(str(bond.GetBondType()))
-            this_feat[q] = 1
-            
-            if use_relational_edge:
-                this_feat = q
-            else:
-                this_feat = np.array(this_feat)
+            temp_feat = [0 for q in range(4)]
+            q = ['SINGLE', 'DOUBLE', 'TRIPLE', 'AROMATIC'].index(
+                str(bond.GetBondType()))
+            # print(q)
+            temp_feat[q] = 1
+            # print(temp_feat)
 
-            edge_dict[(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())] = this_feat
+            if use_relational_edge:
+                this_feat = np.array([q])
+            else:
+                this_feat = np.array(temp_feat)
+
+            edge_dict[(bond.GetBeginAtomIdx(),
+                       bond.GetEndAtomIdx())] = this_feat
             edge_dict[(bond.GetEndAtomIdx(), bond.GetBeginAtomIdx())] = this_feat
 
     g = nx.Graph(edges).to_directed()
@@ -291,7 +322,8 @@ def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl = None, do_e
     else:
         return c_size, features, edge_index, g
 
-def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = None, do_edge_features = False, do_atom_ecfp = False, ecfp_radius = None, use_radius = None, use_relational_edge = False, folder = "data/GDSC/" ):
+
+def load_drug_smile_X(do_ordinary_atom_feat=False, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius=None, use_relational_edge=False, folder="data/GDSC/"):
     """
       Output :
         (dictionary) drug_dict : Keys - (str) name of drug, Values - (int) index/position of drug in drug_smile
@@ -301,15 +333,14 @@ def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = 
     drug_dict = {}
     drug_smile = []
 
+    reader = csv.reader(open(folder + "drug_smiles.csv"))  # From csv
+    next(reader, None)  # From csv
 
-    reader = csv.reader(open(folder + "drug_smiles.csv"))    ## From csv
-    next(reader, None)                                        ## From csv
-
-    for cnt, item in enumerate(reader):                       ## From csv
-                                                                ## From df3
+    for cnt, item in enumerate(reader):  # From csv
+        # From df3
         # print(item)
-        name = item[0]                                          
-        smile = item[2]                                       ## From csv
+        name = item[0]
+        smile = item[2]  # From csv
         # smile = item[-1]                                       ## From csv
 
         # skip the Cisplatin drug
@@ -333,14 +364,17 @@ def load_drug_smile_X(do_ordinary_atom_feat = False, do_mol_ecfp = False, fpl = 
         # g = smile_to_graph(smile)
         # print(smile)
         if (do_edge_features):
-            gr = smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
+            gr = smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl,
+                                  do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
         else:
-            gr = smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
+            gr = smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp,
+                                  fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
         smile_graph[smile] = gr
 
     return drug_dict, drug_smile, smile_graph
 
-def save_cell_mut_matrix_X(folder = 'data/GDSC/'):
+
+def save_cell_mut_matrix_X(folder='data/GDSC/'):
     """
     PANCANCER_Genetic_feature.csv
     0                1                 2           3          4         5                6
@@ -362,9 +396,10 @@ def save_cell_mut_matrix_X(folder = 'data/GDSC/'):
     matrix_list = []
 
     for item in reader:
-        cell_id = item[1] ## cosmic_sample_id       1290730, 1290730, 1290730
-        mut = item[5] ## genetic_feature            CDC27_mut, CDC73_mut, CDH1_mut
-        is_mutated = int(item[6]) ## is_mutated     0, 0, 0
+        cell_id = item[1]  # cosmic_sample_id       1290730, 1290730, 1290730
+        # genetic_feature            CDC27_mut, CDC73_mut, CDH1_mut
+        mut = item[5]
+        is_mutated = int(item[6])  # is_mutated     0, 0, 0
 
         if mut in mut_dict:
             col = mut_dict[mut]
@@ -388,7 +423,7 @@ def save_cell_mut_matrix_X(folder = 'data/GDSC/'):
     return cell_dict, cell_feature, matrix_list, mut_dict
 
 
-def save_cell_mut_matrix_XO(folder = 'data/GDSC/'):
+def save_cell_mut_matrix_XO(folder='data/GDSC/'):
     """
  Output :
         (dictionary) cell_dict : Keys - (str) cosmic_sample_id, Values - (int) index/position of the key (cosmic_sample_id) in uniquely sorted list of cosmic_sample_id values
@@ -405,9 +440,9 @@ def save_cell_mut_matrix_XO(folder = 'data/GDSC/'):
     matrix_list = []
 
     for item in reader:
-        cell_id = item[1]           ## cosmic_sample_id
-        mut = item[5]               ## genetic_feature
-        is_mutated = int(item[6])   ## is_mutated
+        cell_id = item[1]  # cosmic_sample_id
+        mut = item[5]  # genetic_feature
+        is_mutated = int(item[6])  # is_mutated
 
         if mut in mut_dict:
             col = mut_dict[mut]
@@ -433,15 +468,16 @@ def save_cell_mut_matrix_XO(folder = 'data/GDSC/'):
 
     return cell_dict, cell_feature
 
-    
-def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, return_names = True, use_relational_edge = False, folder = 'data/GDSC/'):
+
+def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat=False, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius=None, return_names=True, use_relational_edge=False, folder='data/GDSC/'):
     f = open(folder + "PANCANCER_IC.csv")
     reader = csv.reader(f)
     next(reader)
 
-    cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X() 
-    drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
-    
+    cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X()
+    drug_dict, drug_smile, smile_graph = load_drug_smile_X(
+        do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
+
     print('drug number:', len(drug_dict))
     print('cell line number:', len(cell_dict))
 
@@ -449,106 +485,117 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat = False, do_mol_ecfp=False
     bExist = np.zeros((len(drug_dict), len(cell_dict)))
 
     for item in reader:
-        drug = item[0]    ## Drug name
-        cell = item[3]    ## Cosmic sample Id
-        ic50 = item[8]    ## IC50
+        drug = item[0]  # Drug name
+        cell = item[3]  # Cosmic sample Id
+        ic50 = item[8]  # IC50
         ic50 = 1 / (1 + pow(math.exp(float(ic50)), -0.1))
         temp_data.append((drug, cell, ic50))
-        
+
     print('total length of drug-cellline pair:', len(temp_data))
 
     xd = []
     xc = []
     y = []
     lst_drug = []
-    lst_cell = []   
-    
+    lst_cell = []
+
     # TODO: remove this shuffle operation. (finished)
     # for mixed test, shuffle will be done in load_data.py, controlling by the random seed
     # for blind test, no shuffle is needed
     # random.shuffle(temp_data)
-    
+
     n_missing = 0
-    
+
     for data in temp_data:
         drug, cell, ic50 = data
         if drug in drug_dict and cell in cell_dict:
-            xd.append(drug_smile[drug_dict[drug]])        ## appending the smile of the drug into list xd
-            xc.append(cell_feature[cell_dict[cell]])      ## appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
-            y.append(ic50)                                ## appending (int) ic50 value of that smile to list y
-            bExist[drug_dict[drug], cell_dict[cell]] = 1  ## (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1 
-            lst_drug.append(drug)                         ## appending (str) name of this drug to list lst_drug
-            lst_cell.append(cell)                         ## appending (numeric str) this Cosmic sample Id to list lst_cell
-            
+            # appending the smile of the drug into list xd
+            xd.append(drug_smile[drug_dict[drug]])
+            # appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
+            xc.append(cell_feature[cell_dict[cell]])
+            # appending (int) ic50 value of that smile to list y
+            y.append(ic50)
+            # (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1
+            bExist[drug_dict[drug], cell_dict[cell]] = 1
+            # appending (str) name of this drug to list lst_drug
+            lst_drug.append(drug)
+            # appending (numeric str) this Cosmic sample Id to list lst_cell
+            lst_cell.append(cell)
+
         else:
             # if drug not in drug_dict:
             #     print('unrecognized drug:', drug)
             # if cell not in cell_dict:
             #     print('unrecognized cell line:', cell)
-                
+
             n_missing += 1
-            
+
     print('missing pairs:', n_missing)
 
     if (return_names):
-        xd, xc, y, dglist, coslist = np.asarray(xd), np.asarray(xc), np.asarray(y), np.asarray(lst_drug), np.asarray(lst_cell)
+        xd, xc, y, dglist, coslist = np.asarray(xd), np.asarray(
+            xc), np.asarray(y), np.asarray(lst_drug), np.asarray(lst_cell)
     else:
-        xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)  
+        xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)
 
     dataset = 'GDSC'
-    print('preparing ', dataset + '_train.pt in pytorch format!')                         
+    print('preparing ', dataset + '_train.pt in pytorch format!')
 
     if (return_names):
         return xd, xc, y, dglist, coslist
     else:
         return xd, xc, y
-    
+
 
 # functions to use gene expression data from CCLE
 def preproc_gene_expr(ccle_expr, meta_data):
     # remove genes with low expression levels and select top 1000 genes according to variance
-    ccle_expr = ccle_expr.loc[:, (ccle_expr==0).sum()<ccle_expr.shape[0]*0.1]
+    ccle_expr = ccle_expr.loc[:,
+                              (ccle_expr == 0).sum() < ccle_expr.shape[0]*0.1]
     expr_var = ccle_expr.var()
     expr_var_arr = np.array(expr_var)
     gene_rnk = np.flip(np.argsort(expr_var_arr))
     filtered_expr = ccle_expr.iloc[:, gene_rnk[:1000]]
-    
+
     meta_data = meta_data[meta_data['COSMICID'].notna()]
-    expr_data = filtered_expr.merge(meta_data, left_index=True, right_on='DepMap_ID')
+    expr_data = filtered_expr.merge(
+        meta_data, left_index=True, right_on='DepMap_ID')
     expr_data.drop('DepMap_ID', axis=1, inplace=True)
 
     expr_data['COSMICID'] = expr_data['COSMICID'].astype(int).astype(str)
     expr_data.set_index('COSMICID', inplace=True)
-    
+
     return expr_data
 
 
 def save_gene_expr_matrix_X(folder='data/CCLE/'):
     df = pd.read_csv(folder + 'CCLE_expression.csv', index_col=0, header=0)
-    meta_df = pd.read_csv(folder + 'sample_info.csv', header=0, usecols=['DepMap_ID', 'COSMICID'])
+    meta_df = pd.read_csv(folder + 'sample_info.csv',
+                          header=0, usecols=['DepMap_ID', 'COSMICID'])
     processed_df = preproc_gene_expr(df, meta_df)
-    
+
     cells = processed_df.index.values
     cell_dict = dict()
     for c in cells:
-        idx = np.where(cells==c)[0]
+        idx = np.where(cells == c)[0]
         cell_dict[c] = idx
 
     cell_feature = processed_df.values
     gene_list = processed_df.columns
-    
+
     return cell_dict, cell_feature, gene_list
 
 
-def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat = True, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius = None, use_relational_edge = False, return_names = True, folder = 'data/GDSC/'):
+def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat=True, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius=None, use_relational_edge=False, return_names=True, folder='data/GDSC/'):
     f = open(folder + "PANCANCER_IC.csv")
     reader = csv.reader(f)
     next(reader)
 
-#     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X() 
+#     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X()
     cell_dict, cell_feature, _ = save_gene_expr_matrix_X()
-    drug_dict, drug_smile, smile_graph = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
-    
+    drug_dict, drug_smile, smile_graph = load_drug_smile_X(
+        do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
+
     print('drug number:', len(drug_dict))
     print('cell line number:', len(cell_dict))
 
@@ -556,54 +603,61 @@ def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat = True, do_mol_ecfp=Fa
     bExist = np.zeros((len(drug_dict), len(cell_dict)))
 
     for item in reader:
-        drug = item[0]    ## Drug name
-        cell = item[3]    ## Cosmic sample Id
-        ic50 = item[8]    ## IC50
+        drug = item[0]  # Drug name
+        cell = item[3]  # Cosmic sample Id
+        ic50 = item[8]  # IC50
         ic50 = 1 / (1 + pow(math.exp(float(ic50)), -0.1))
         temp_data.append((drug, cell, ic50))
-        
+
     print('total length of drug-cellline pair:', len(temp_data))
 
     xd = []
     xc = []
     y = []
     lst_drug = []
-    lst_cell = []   
-    
+    lst_cell = []
+
     # TODO: remove this shuffle operation. (finished)
     # for mixed test, shuffle will be done in load_data.py, controlling by the random seed
     # for blind test, no shuffle is needed
     # random.shuffle(temp_data)
-    
+
     n_missing = 0
-    
+
     for data in temp_data:
         drug, cell, ic50 = data
         if drug in drug_dict and cell in cell_dict:
-            xd.append(drug_smile[drug_dict[drug]])        ## appending the smile of the drug into list xd
-            xc.append(cell_feature[cell_dict[cell]])      ## appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
-            y.append(ic50)                                ## appending (int) ic50 value of that smile to list y
-            bExist[drug_dict[drug], cell_dict[cell]] = 1  ## (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1 
-            lst_drug.append(drug)                         ## appending (str) name of this drug to list lst_drug
-            lst_cell.append(cell)                         ## appending (numeric str) this Cosmic sample Id to list lst_cell
-            
+            # appending the smile of the drug into list xd
+            xd.append(drug_smile[drug_dict[drug]])
+            # appending numpy array of shape (len(mut_dict),) ie. (735,) to list xc
+            xc.append(cell_feature[cell_dict[cell]])
+            # appending (int) ic50 value of that smile to list y
+            y.append(ic50)
+            # (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1
+            bExist[drug_dict[drug], cell_dict[cell]] = 1
+            # appending (str) name of this drug to list lst_drug
+            lst_drug.append(drug)
+            # appending (numeric str) this Cosmic sample Id to list lst_cell
+            lst_cell.append(cell)
+
         else:
             # if drug not in drug_dict:
             #     print('unrecognized drug:', drug)
             # if cell not in cell_dict:
             #     print('unrecognized cell line:', cell)
-                
+
             n_missing += 1
-            
+
     print('missing pairs:', n_missing)
 
     if (return_names):
-        xd, xc, y, dglist, coslist = np.asarray(xd), np.asarray(xc), np.asarray(y), np.asarray(lst_drug), np.asarray(lst_cell)
+        xd, xc, y, dglist, coslist = np.asarray(xd), np.asarray(
+            xc), np.asarray(y), np.asarray(lst_drug), np.asarray(lst_cell)
     else:
-        xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)  
+        xd, xc, y = np.asarray(xd), np.asarray(xc), np.asarray(y)
 
     dataset = 'GDSC'
-    print('preparing ', dataset + '_train.pt in pytorch format!')                         
+    print('preparing ', dataset + '_train.pt in pytorch format!')
 
     if (return_names):
         return xd, xc, y, dglist, coslist
