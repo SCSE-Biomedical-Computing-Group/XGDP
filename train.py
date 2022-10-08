@@ -99,9 +99,9 @@ modeling = [GCNNet, GATNet, GATNet_E, GATv2Net,
 # val_batch = 512
 # test_batch = 512
 
-train_batch = 128
-val_batch = 128
-test_batch = 128
+train_batch = 32
+val_batch = 32
+test_batch = 32
 
 lr = 1e-4
 num_epoch = 300
