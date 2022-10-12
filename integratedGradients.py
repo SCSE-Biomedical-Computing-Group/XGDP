@@ -6,11 +6,11 @@ import pandas as pd
 import argparse, os
 
 from utils_data import TestbedDataset
-from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet
+from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet, WIRGATNet, RGCNNet
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE")
-parser.add_argument("-o", "--object", type=int, default=0, help="decoding object: 0:drug, 1:drug edges, 2:cell_line")
+parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN")
+parser.add_argument("-o", "--object", type=int, default=2, help="decoding object: 0:drug, 1:drug edges, 2:cell_line")
 parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
 
@@ -29,8 +29,8 @@ device = torch.device(gpu if torch.cuda.is_available() else "cpu")
 # model = GATNet_E()
 # model_path = 'root_folder/root_002/results/model_GAT_Edge-EP300-SW801010_GDSC.model'
 
-model = [GCNNet(), GATNet(), GATNet_E(), GATv2Net(), SAGENet(), GINNet(), GINENet()][model_type]
-model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE'][model_type]
+model = [GCNNet(), GATNet(), GATNet_E(), GATv2Net(), SAGENet(), GINNet(), GINENet(), WIRGATNet(), None, RGCNNet()][model_type]
+model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN'][model_type]
 
 branch_folder = "root_folder/root_" + b
 model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC.model')

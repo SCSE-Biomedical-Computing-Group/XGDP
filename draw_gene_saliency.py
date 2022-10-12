@@ -7,7 +7,7 @@ from utils_preproc import preproc_gene_expr, save_gene_expr_matrix_X
 from utils_decoding import normalize_ss, rank_ss, draw_one_drug, draw_gene_saliency, make_drug_dict
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE")
+parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN")
 # parser.add_argument("-o", "--object", type=int, default=1, help="decoding object: 0:atoms, 1:bonds, 2:cell_line")
 # parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
@@ -20,7 +20,7 @@ model_type = args.model
 b = args.branch
 # annotation = args.annotation
 
-model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE'][model_type]
+model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN'][model_type]
 branch_folder = "root_folder/root_" + b
 
 # dataset = 'GDSC'
