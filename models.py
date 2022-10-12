@@ -25,7 +25,7 @@ TODO: (already done)
 
 
 class GCNNet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=78, num_features_xt=25, output_dim=128, dropout=0.5):  # qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=334, num_features_xt=25, output_dim=128, dropout=0.5):  # qwe
 
         super(GCNNet, self).__init__()
 
@@ -115,7 +115,7 @@ class GCNNet(torch.nn.Module):
 
 
 class GATNet(torch.nn.Module):
-    def __init__(self, num_features_xd=78, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25, n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet, self).__init__()
 
         # graph layers
@@ -202,7 +202,7 @@ class GATNet(torch.nn.Module):
 
 
 class GATv2Net(torch.nn.Module):
-    def __init__(self, num_features_xd=78, n_output=1, num_features_xt=25,
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25,
                  n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATv2Net, self).__init__()
 
@@ -293,7 +293,7 @@ class GATv2Net(torch.nn.Module):
 
 
 class GATNet_E(torch.nn.Module):
-    def __init__(self, num_features_xd=78, n_output=1, num_features_xt=25,
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25,
                  n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
         super(GATNet_E, self).__init__()
 
@@ -390,7 +390,7 @@ class GATNet_E(torch.nn.Module):
 
 
 class SAGENet(torch.nn.Module):
-    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=78, num_features_xt=25, output_dim=128, dropout=0.5):  # qwe
+    def __init__(self, n_output=1, n_filters=32, embed_dim=128, num_features_xd=334, num_features_xt=25, output_dim=128, dropout=0.5):  # qwe
 
         super(SAGENet, self).__init__()
 
@@ -477,7 +477,7 @@ class SAGENet(torch.nn.Module):
 
 
 class GINNet(torch.nn.Module):
-    def __init__(self, n_output=1, num_features_xd=78, num_features_xt=25,
+    def __init__(self, n_output=1, num_features_xd=334, num_features_xt=25,
                  n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
 
         super(GINNet, self).__init__()
@@ -590,7 +590,7 @@ class GINNet(torch.nn.Module):
 
 
 class GINENet(torch.nn.Module):
-    def __init__(self, n_output=1, num_features_xd=78, num_features_xt=25,
+    def __init__(self, n_output=1, num_features_xd=334, num_features_xt=25,
                  n_filters=32, embed_dim=128, output_dim=128, dropout=0.5):
 
         super(GINENet, self).__init__()
