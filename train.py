@@ -37,7 +37,7 @@ import utils_data
 from utils_train import main
 # from functions import main
 # from models_deprecated import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet
-from models import GCNNet, GATNet, GATNet_E, GATv2Net, GINENet, GINNet, SAGENet, WIRGATNet, RGCNNet
+from models import GCNNet, GATNet, GATNet_E, GATv2Net, GINENet, GINNet, SAGENet, WIRGATNet, ARGATNet, RGCNNet
 
 parser = argparse.ArgumentParser()
 # parser.add_argument("-m", "--model", type=str, default="GCN", help="model type: GCN, GAT, GAT_Edge, GATv2, SAGE, GIN, GINE")
@@ -90,19 +90,19 @@ os.makedirs(model_folder, exist_ok=True)
 #     print("wrong model type!")
 #     exit
 modeling = [GCNNet, GATNet, GATNet_E, GATv2Net,
-            SAGENet, GINNet, GINENet, WIRGATNet, None, RGCNNet][model_type]
+            SAGENet, GINNet, GINENet, WIRGATNet, ARGATNet, RGCNNet][model_type]
 
 # train_batch = 1024
 # val_batch = 1024
 # test_batch = 1024
 
-train_batch = 512
-val_batch = 512
-test_batch = 512
+# train_batch = 512
+# val_batch = 512
+# test_batch = 512
 
-# train_batch = 32
-# val_batch = 32
-# test_batch = 32
+train_batch = 32
+val_batch = 32
+test_batch = 32
 
 lr = 1e-4
 num_epoch = 300
