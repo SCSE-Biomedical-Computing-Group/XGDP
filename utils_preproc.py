@@ -548,14 +548,14 @@ def save_mix_drug_cell_matrix_X(do_ordinary_atom_feat=False, do_mol_ecfp=False, 
 
 
 # functions to use gene expression data from CCLE
-def preproc_gene_expr(ccle_expr, meta_data):
-    # remove genes with low expression levels and select top 1000 genes according to variance
+def preproc_gene_expr(ccle_expr, meta_data, top_n=1000):
+    # remove genes with low expression levels and select top n (default=1000) genes according to variance
     ccle_expr = ccle_expr.loc[:,
                               (ccle_expr == 0).sum() < ccle_expr.shape[0]*0.1]
     expr_var = ccle_expr.var()
     expr_var_arr = np.array(expr_var)
     gene_rnk = np.flip(np.argsort(expr_var_arr))
-    filtered_expr = ccle_expr.iloc[:, gene_rnk[:1000]]
+    filtered_expr = ccle_expr.iloc[:, gene_rnk[:top_n]]
 
     meta_data = meta_data[meta_data['COSMICID'].notna()]
     expr_data = filtered_expr.merge(
@@ -568,11 +568,11 @@ def preproc_gene_expr(ccle_expr, meta_data):
     return expr_data
 
 
-def save_gene_expr_matrix_X(folder='data/CCLE/'):
+def save_gene_expr_matrix_X(top_n=1000, folder='data/CCLE/'):
     df = pd.read_csv(folder + 'CCLE_expression.csv', index_col=0, header=0)
     meta_df = pd.read_csv(folder + 'sample_info.csv',
                           header=0, usecols=['DepMap_ID', 'COSMICID'])
-    processed_df = preproc_gene_expr(df, meta_df)
+    processed_df = preproc_gene_expr(df, meta_df, top_n)
 
     cells = processed_df.index.values
     cell_dict = dict()
@@ -586,13 +586,13 @@ def save_gene_expr_matrix_X(folder='data/CCLE/'):
     return cell_dict, cell_feature, gene_list
 
 
-def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat=True, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius=None, use_relational_edge=False, return_names=True, folder='data/GDSC/'):
+def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat=True, do_mol_ecfp=False, fpl=None, do_edge_features=False, do_atom_ecfp=False, ecfp_radius=None, use_radius=None, use_relational_edge=False, return_names=True, top_n=1000, folder='data/GDSC/'):
     f = open(folder + "PANCANCER_IC.csv")
     reader = csv.reader(f)
     next(reader)
 
 #     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X()
-    cell_dict, cell_feature, _ = save_gene_expr_matrix_X()
+    cell_dict, cell_feature, _ = save_gene_expr_matrix_X(top_n)
     drug_dict, drug_smile, smile_graph = load_drug_smile_X(
         do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
 
