@@ -660,6 +660,6 @@ def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat=True, do_mol_ecfp=Fals
     print('preparing ', dataset + '_train.pt in pytorch format!')
 
     if (return_names):
-        return xd, xc, y, dglist, coslist
+        return xd, xc, y, dglist, coslist, bExist
     else:
-        return xd, xc, y
+        return xd, xc, y, bExist

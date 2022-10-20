@@ -33,14 +33,14 @@ check_duplicate = False
 # check_duplicate = True
 
 if (check_duplicate):
-  if (branch_name in os.listdir(root_folder)):
-    new_fol_str = str(max([int(fol[-3:]) for fol in os.listdir(root_folder)]) + 1)
-    print(f"new_fol_str = {new_fol_str}")
-    while (len(new_fol_str) < 3):
-      new_fol_str = "0" + new_fol_str
-    new_fol_str = "root_" + new_fol_str
-    print(f"root_folder = {root_folder}")
-    raise ValueError(f'{branch_name} already exists in the folder {root_folder}. Try naming the folder : {new_fol_str}')
+    if (branch_name in os.listdir(root_folder)):
+        new_fol_str = str(max([int(fol[-3:]) for fol in os.listdir(root_folder)]) + 1)
+        print(f"new_fol_str = {new_fol_str}")
+        while (len(new_fol_str) < 3):
+          new_fol_str = "0" + new_fol_str
+        new_fol_str = "root_" + new_fol_str
+        print(f"root_folder = {root_folder}")
+        raise ValueError(f'{branch_name} already exists in the folder {root_folder}. Try naming the folder : {new_fol_str}')
 
 branch_folder = root_folder + branch_name
 # branch_folder
@@ -62,12 +62,12 @@ assert top_n_gene <= 13142
 
 drug_dict_X, drug_smile_X, smile_graph_X = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
 # xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_cell_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
-xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge, top_n_gene)
+xd_X, xc_X, y_X, dgl, cosl, bExist = save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge, top_n_gene)
 
 # print(smile_graph_X)
 
 # for blind test (drugs appearing in the testing set do not appear in the training set), set randomize = False
-randomize = True
+randomize = False
 seed = 19871729 ## start from 19871729, add one each time for multiple testing
 
 if (randomize):
@@ -86,8 +86,15 @@ if (randomize):
     np.random.seed(seed)
     np.random.shuffle(cosl)
 
-size_X = int(xd_X.shape[0] * 0.8)
-size1_X = int(xd_X.shape[0] * 0.9)
+    size_X = int(xd_X.shape[0] * 0.8)
+    size1_X = int(xd_X.shape[0] * 0.9)
+
+else:
+    bExist_train = bExist[:int(bExist.shape[0]*0.8), :]
+    bExist_val = bExist[int(bExist.shape[0]*0.8):int(bExist.shape[0]*0.9), :]
+    bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
+    size_X = int(bExist_train.sum())
+    size1_X = int(bExist_train.sum() + bExist_val.sum())
 
 xd_train_X = xd_X[:size_X]
 print('xd_train_X',xd_train_X.shape)
