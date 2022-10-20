@@ -52,7 +52,7 @@ gpu = args.gpu
 b = args.branch
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 # save_name = "GCN-EP300-SW801010"
 model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2',
@@ -96,13 +96,13 @@ modeling = [GCNNet, GATNet, GATNet_E, GATv2Net,
 # val_batch = 1024
 # test_batch = 1024
 
-# train_batch = 512
-# val_batch = 512
-# test_batch = 512
+train_batch = 512
+val_batch = 512
+test_batch = 512
 
-train_batch = 32
-val_batch = 32
-test_batch = 32
+# train_batch = 32
+# val_batch = 32
+# test_batch = 32
 
 lr = 1e-4
 num_epoch = 300
