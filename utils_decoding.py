@@ -4,23 +4,46 @@ import seaborn as sns
 import matplotlib.pylab as plt
 import os
 
-def make_drug_dict(dir):
-    drug_dict = dict()
+def make_ss_dict(dir, type='drug'):
+    num_dict = dict()
     sal_dict = dict()
     for filename in os.listdir(dir):
-        drug_name = filename.split('_')[1]
-        one = np.load(os.path.join(dir, filename))
-        if drug_name not in drug_dict.keys() and drug_name not in sal_dict.keys():
-            drug_dict[drug_name] = 1
-            sal_dict[drug_name] = one
+        if type == 'drug':
+            name = filename.split('_')[1]
         else:
-            drug_dict[drug_name] += 1
-            sal_dict[drug_name] = np.add(sal_dict[drug_name], one)
+            name = filename.split('_')[2]
+
+        one = np.load(os.path.join(dir, filename))
+        if name not in num_dict.keys() and name not in sal_dict.keys():
+            num_dict[name] = 1
+            sal_dict[name] = one
+        else:
+            num_dict[name] += 1
+            sal_dict[name] = np.add(sal_dict[name], one)
     
     for k, v in sal_dict.items():
-        sal_dict[k] = v/drug_dict[k]
+        sal_dict[k] = v/num_dict[k]
     
-    return drug_dict, sal_dict
+    return num_dict, sal_dict
+
+
+# def make_cell_dict(dir):
+#     drug_dict = dict()
+#     sal_dict = dict()
+#     for filename in os.listdir(dir):
+#         cell_name = filename.split('_')[2]
+#         one = np.load(os.path.join(dir, filename))
+#         if cell_name not in drug_dict.keys() and cell_name not in sal_dict.keys():
+#             drug_dict[cell_name] = 1
+#             sal_dict[cell_name] = one
+#         else:
+#             drug_dict[cell_name] += 1
+#             sal_dict[cell_name] = np.add(sal_dict[cell_name], one)
+    
+#     for k, v in sal_dict.items():
+#         sal_dict[k] = v/drug_dict[k]
+    
+#     return drug_dict, sal_dict
 
 
 def make_edge_dict(loader):
@@ -109,7 +132,7 @@ def rank_ss(sal_dict):
     return rank_dict
 
 
-def draw_one_drug(save_path, drug_name, ranked_ss, ranked_genes, top_n=25):
+def draw_one(save_path, name, ranked_ss, ranked_genes, top_n=25):
     values = ranked_ss[:top_n]
     index = ranked_genes[:top_n]
     
@@ -124,18 +147,18 @@ def draw_one_drug(save_path, drug_name, ranked_ss, ranked_genes, top_n=25):
     res.set_yticklabels([])
 
     # plt.show()
-    fig.savefig(os.path.join(save_path, drug_name + '.png'))
+    fig.savefig(os.path.join(save_path, name + '.png'))
 
 
 def draw_gene_saliency(rank_dict, sal_dict, gene_list, save_path):
     i = 0
-    for drug in sal_dict.keys():
+    for key in sal_dict.keys():
         i += 1
-        print('working on ', drug)
+        print('working on ', key)
         print('progress: ', i, '/', len(sal_dict))
-        rnk = rank_dict[drug]
-        sal_score = sal_dict[drug].reshape(-1)
+        rnk = rank_dict[key]
+        sal_score = sal_dict[key].reshape(-1)
         ranked_ss = sal_score[rnk]
         ranked_genes = gene_list[rnk]
 
-        draw_one_drug(save_path, drug, ranked_ss, ranked_genes)
+        draw_one(save_path, key, ranked_ss, ranked_genes)
