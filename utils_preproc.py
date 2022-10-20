@@ -634,7 +634,7 @@ def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat=True, do_mol_ecfp=Fals
             # appending (int) ic50 value of that smile to list y
             y.append(ic50)
             # (drug_name, Cosmic_sample_Id) pair used to index the numpy array and set to 1
-            bExist[drug_dict[drug], cell_dict[cell]] = 1
+            bExist[drug_dict[drug], cell_dict[cell]] += 1
             # appending (str) name of this drug to list lst_drug
             lst_drug.append(drug)
             # appending (numeric str) this Cosmic sample Id to list lst_cell

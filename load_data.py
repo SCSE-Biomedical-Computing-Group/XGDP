@@ -93,6 +93,8 @@ else:
     bExist_train = bExist[:int(bExist.shape[0]*0.8), :]
     bExist_val = bExist[int(bExist.shape[0]*0.8):int(bExist.shape[0]*0.9), :]
     bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
+    # print(bExist_train.sum(), bExist_val.sum(), bExist_test.sum())
+
     size_X = int(bExist_train.sum())
     size1_X = int(bExist_train.sum() + bExist_val.sum())
 
