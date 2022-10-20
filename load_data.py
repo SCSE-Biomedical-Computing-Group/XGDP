@@ -57,7 +57,7 @@ ecfp_radius = 4   # this is actually radius + 1, set it to 4 for ECFP6  (256 fea
 use_radius = None
 use_relational_edge = False 
 # only applicable to gene expression data, not CNV data
-top_n_gene = 4000   # use top_n_gene = None to involve all genes 
+top_n_gene = 1000   # use top_n_gene = None to involve all genes 
 assert top_n_gene <= 13142
 
 drug_dict_X, drug_smile_X, smile_graph_X = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
