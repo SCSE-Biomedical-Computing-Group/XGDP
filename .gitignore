@@ -1,0 +1,4 @@
+root_folder
+__pycache__
+.ipynb_checkpoints
+data
