@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import powerlaw as pl
 import matplotlib.pylab as plt
 import os
 
@@ -130,6 +131,69 @@ def rank_ss(sal_dict):
         rank_dict[k] = temp
         
     return rank_dict
+
+
+def one_shot_removal(feature_score, alpha):
+    """
+    Fits the distribution of saliency score to various distributions, find the best fitting one and keep alpha % of the features
+    Performed for a single layer; this function is called by called by compute_new_reduced_model 
+    Inputs:
+    - feature_score: Numpy array containing the saliency score for each feature
+    - alpha: 1 - alpha represents the fraction of (the most important) features to keep (float)
+    Returns: 
+    - selected_features: Numpy array containing 1s and 0s, 1 represents a selected feature 
+    """
+
+    selected_features = np.zeros(np.shape(feature_score))
+
+    LAYER_SIZE_THRESHOLD = 2 
+
+    if np.shape(feature_score)[0] > LAYER_SIZE_THRESHOLD:
+        feature_score[feature_score == 0] = 1e-10
+        x_min = np.min(feature_score) 
+        x_max = np.max(feature_score) 
+        params_power_law, loglikelihood_power_law = pl.distribution_fit(np.asarray(feature_score), distribution='power_law', xmin=x_min, xmax=x_max, discrete=False, comparison_alpha=False, search_method='Likelihood', estimate_discrete=False)
+        params_lognormal, loglikelihood_lognormal = pl.distribution_fit(np.asarray(feature_score), distribution='lognormal', xmin=x_min, xmax=x_max, discrete=False, comparison_alpha=False, search_method='Likelihood', estimate_discrete=False)
+        params_expo, loglikelihood_expo = pl.distribution_fit(np.asarray(feature_score), distribution='exponential', xmin=x_min, xmax=x_max, discrete=False, comparison_alpha=False, search_method='Likelihood', estimate_discrete=False)
+        params_stretched, loglikelihood_stretched = pl.distribution_fit(np.asarray(feature_score), distribution='stretched_exponential', xmin=x_min, xmax=x_max, discrete=False, comparison_alpha=False, search_method='Likelihood', estimate_discrete=False)
+
+        print('Shape of layer', np.shape(feature_score))
+        print('loglikelihood_power_law', loglikelihood_power_law, 'loglikelihood_lognormal', loglikelihood_lognormal, 'loglikelihood_expo', loglikelihood_expo, 'loglikelihood_stretched', loglikelihood_stretched) 
+
+        if loglikelihood_power_law > max(loglikelihood_lognormal, loglikelihood_expo, loglikelihood_stretched):  
+            theoretical_distribution = pl.Power_Law(xmin=x_min, parameters=params_power_law, xmax=x_max, discrete=False)
+            prob_dist = theoretical_distribution.cdf(feature_score)
+            best_fit_dist = 'Power_Law'
+            best_param = params_power_law
+
+        elif loglikelihood_lognormal > max(loglikelihood_power_law, loglikelihood_expo, loglikelihood_stretched):
+            theoretical_distribution = pl.Lognormal(xmin=x_min, parameters=params_lognormal, xmax=x_max, discrete=False)
+            prob_dist = theoretical_distribution.cdf(feature_score)
+            best_fit_dist = 'Lognormal'
+            best_param = params_lognormal
+
+        elif loglikelihood_expo > max(loglikelihood_power_law, loglikelihood_lognormal, loglikelihood_stretched):
+            theoretical_distribution = pl.Exponential(xmin=x_min, parameters=params_expo, xmax=x_max, discrete=False)
+            prob_dist = theoretical_distribution.cdf(feature_score)
+            best_fit_dist = 'Exponential'
+            best_param = params_expo
+
+        elif loglikelihood_stretched > max(loglikelihood_power_law, loglikelihood_lognormal, loglikelihood_expo):
+            theoretical_distribution = pl.Stretched_Exponential(xmin=x_min, parameters=params_stretched, xmax=x_max, discrete=False)
+            prob_dist = theoretical_distribution.cdf(feature_score)
+            best_fit_dist = 'Stretched_Exponential'
+            best_param = params_stretched
+
+        print('values', feature_score)
+        print('PDF: ', prob_dist, prob_dist.shape, 'best fit distribution', best_fit_dist, 'best params ', best_param)
+        selected_features = prob_dist > (1 - alpha)
+        
+        print('Number of DeepLIFT selected features: ', np.sum(selected_features))
+
+    if np.shape(feature_score)[0] < LAYER_SIZE_THRESHOLD or np.sum(selected_features) == 0:
+        selected_features = np.ones(np.shape(feature_score))
+
+    return selected_features
 
 
 def draw_one(save_path, name, ranked_ss, ranked_genes, top_n=25):
