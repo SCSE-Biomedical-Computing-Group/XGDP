@@ -2,8 +2,13 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import powerlaw as pl
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit_heatmaps.molmapping import mapvalues2mol
+from rdkit_heatmaps.utils import transform2png
 import matplotlib.pylab as plt
 import os
+from collections import defaultdict
 
 def make_ss_dict(dir, type='drug'):
     num_dict = dict()
