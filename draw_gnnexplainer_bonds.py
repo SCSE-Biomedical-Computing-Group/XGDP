@@ -1,4 +1,3 @@
-from nis import match
 from rdkit import Chem
 from rdkit.Chem import AllChem
 import os, argparse
@@ -9,7 +8,7 @@ from utils_data import TestbedDataset
 from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet
 from rdkit_heatmaps.molmapping import mapvalues2mol
 from rdkit_heatmaps.utils import transform2png
-from utils_decoding import make_drug_dict, make_edge_dict, draw_mol_saliency_scores
+from utils_decoding import make_ss_dict, make_edge_dict, draw_mol_saliency_scores
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE")
@@ -44,11 +43,11 @@ elif annotation == 2:
     d_save_path = d_save_path + '/ss+heatmap'
 else:
     print('wrong annotation type!')
-    exit
+    exit()
         
 os.makedirs(d_save_path, exist_ok=True)
 
-_, sal_dict = make_drug_dict(d_path)
+_, sal_dict = make_ss_dict(d_path)
 print('all drugs: ', sal_dict.keys())
 smiles_dict, edge_idx_dict = make_edge_dict(test_loader)
 draw_mol_saliency_scores(sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
