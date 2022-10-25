@@ -592,7 +592,7 @@ def save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat=True, do_mol_ecfp=Fals
     next(reader)
 
 #     cell_dict, cell_feature, qa, aq = save_cell_mut_matrix_X()
-    cell_dict, cell_feature, _ = save_gene_expr_matrix_X(top_n)
+    cell_dict, cell_feature, _ = save_gene_expr_matrix_X(top_n=top_n)
     drug_dict, drug_smile, smile_graph = load_drug_smile_X(
         do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
 

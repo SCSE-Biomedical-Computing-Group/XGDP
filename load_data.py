@@ -55,14 +55,14 @@ do_edge_features = True
 do_atom_ecfp = True
 ecfp_radius = 4   # this is actually radius + 1, set it to 4 for ECFP6  (256 features)
 use_radius = None
-use_relational_edge = True 
+use_relational_edge = False
 # only applicable to gene expression data, not CNV data
-top_n_gene = 1000   # use top_n_gene = None to involve all genes 
-assert top_n_gene <= 13142
+top_n_gene = 13143   # use top_n_gene = None to involve all genes 
+assert top_n_gene <= 13143
 
 drug_dict_X, drug_smile_X, smile_graph_X = load_drug_smile_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge)
 # xd_X, xc_X, y_X, dgl, cosl = save_mix_drug_cell_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius)
-xd_X, xc_X, y_X, dgl, cosl, bExist = save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge, top_n_gene)
+xd_X, xc_X, y_X, dgl, cosl, bExist = save_mix_drug_geneexpr_matrix_X(do_ordinary_atom_feat, do_mol_ecfp, fpl, do_edge_features, do_atom_ecfp, ecfp_radius, use_radius, use_relational_edge, top_n=top_n_gene)
 
 # print(smile_graph_X)
 
