@@ -17,7 +17,7 @@ def make_ss_dict(dir, type='drug'):
         if type == 'drug':
             name = filename.split('_')[1]
         else:
-            name = filename.split('_')[2]
+            name = filename.split('_')[2].split('.')[0]
 
         one = np.load(os.path.join(dir, filename))
         if name not in num_dict.keys() and name not in sal_dict.keys():
