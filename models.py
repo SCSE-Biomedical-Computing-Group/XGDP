@@ -50,7 +50,8 @@ class GCNNet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -135,7 +136,8 @@ class GATNet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -224,7 +226,8 @@ class GATv2Net(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -315,7 +318,8 @@ class GATNet_E(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -417,7 +421,8 @@ class SAGENet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -526,7 +531,8 @@ class GINNet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -639,7 +645,8 @@ class GINENet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(61824, output_dim)
 
         # combined layers
         self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -841,7 +848,8 @@ class WIRGATNet(torch.nn.Module):
         # graph input feed-forward
         # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
         # print(data.x.shape)
-        edge_feat = edge_feat.squeeze()
+        edge_feat = edge_feat.int().squeeze()
+        # print(edge_feat)
 
         # x = F.dropout(x, p=0.2, training=self.training)
         x = self.dropout(x)
@@ -939,7 +947,7 @@ class ARGATNet(torch.nn.Module):
         # graph input feed-forward
         # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
         # print(data.x.shape)
-        edge_feat = edge_feat.squeeze()
+        edge_feat = edge_feat.int().squeeze()
 
         # x = F.dropout(x, p=0.2, training=self.training)
         x = self.dropout(x)
