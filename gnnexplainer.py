@@ -22,7 +22,7 @@ gpu = args.gpu
 b = args.branch
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
-os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 # device = torch.device("cpu")
 device = torch.device(gpu if torch.cuda.is_available() else "cpu")
