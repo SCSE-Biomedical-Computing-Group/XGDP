@@ -1,3 +1,4 @@
+from operator import index
 from torch_geometric.loader import DataLoader
 import torch
 from captum.attr import Saliency, IntegratedGradients
@@ -13,15 +14,17 @@ parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GC
 parser.add_argument("-o", "--object", type=int, default=2, help="decoding object: 0:drug, 1:drug edges, 2:cell_line")
 parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
+parser.add_argument("-q", "--iqr_baseline", action="store_true", default=False, help="add this tag to use iqr_mean baseline")
 
 args = parser.parse_args()
 model_type = args.model
 decoding_object = args.object
 gpu = args.gpu
 b = args.branch
+iqr_baseline = args.iqr_baseline
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
-os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 # device = torch.device("cpu")
 device = torch.device(gpu if torch.cuda.is_available() else "cpu")
@@ -56,12 +59,12 @@ def model_forward(input_mask, data):
         output = model(data.x, data.edge_index, data.batch, input_mask, data.edge_features)
     else:
         print('wrong decoding type!')
-        exit    
+        exit()    
 
     return output
 
 
-def explain(data, device, decoding_type):
+def explain(data, device, decoding_type, baseline):
     data = data.to(device)
     if decoding_type == 'Atom':
         # input_mask = torch.ones(data.x.shape[0], data.x.shape[1]).requires_grad_(True).to(device)
@@ -78,16 +81,26 @@ def explain(data, device, decoding_type):
         internal_bs = data.target.shape[0]
     else:
         print('wrong decoding type!')
-        exit  
+        exit()
 
 #     print(input_mask_drug.shape)
 #     print(data.edge_index.shape)
     ig = IntegratedGradients(model_forward)
-    mask = ig.attribute(input_mask, 
+    if baseline:
+        df = pd.read_csv('data/gene_statistics.csv', header=0, index_col=0)
+        # TODO: how to use top n genes with high variance?
+        gene_baseline = torch.Tensor(df['filtered_mean'].values).reshape(1, 1, -1).to(device)
+        mask = ig.attribute(input_mask, 
                              target = 0,    # target is the interested output dim for decoding, in our case it's 0 (the only dim), but in multi-class classification task it could be other values
-                             additional_forward_args = (data,)
-#                                           additional_forward_args = (data.edge_index, data.batch),
-                             , internal_batch_size=internal_bs
+                             additional_forward_args = (data,), 
+                             baselines=gene_baseline,
+                             internal_batch_size=internal_bs
+                            )
+    else:
+        mask = ig.attribute(input_mask, 
+                             target = 0,    # target is the interested output dim for decoding, in our case it's 0 (the only dim), but in multi-class classification task it could be other values
+                             additional_forward_args = (data,), 
+                             internal_batch_size=internal_bs
                             )
     
     mask = np.abs(mask.cpu().detach().numpy())
@@ -136,6 +149,10 @@ def explain_cell_line(data, device):
 '''
 
 save_path = os.path.join(branch_folder, 'Saliency/IG/' + decoding_type + '/' + model_name + '/')
+if iqr_baseline:
+    save_path += 'iqr_mean_baseline/'
+else:
+    save_path += 'zero_baseline/'
 # save_path_drug = os.path.join(branch_folder, 'Saliency/Drug/' + model_name + '/')
 # save_path_cell = os.path.join(branch_folder, 'Saliency/CellLine/' + model_name + '/')
 os.makedirs(save_path, exist_ok=True)
@@ -144,12 +161,12 @@ for idx, data in enumerate(test_loader):
     print(idx)
     drug_name = data.drug_name[0]
     cell_line_name = data.cell_line_name[0]
-    print('drug name: ', drug_name)
-    print('cell_line name: ', cell_line_name)
+    # print('drug name: ', drug_name)
+    # print('cell_line name: ', cell_line_name)
 #     print(type(data))
 #     print(data.batch)
     data = data.to(device)
-    mask_drug = explain(data, device, decoding_type)
+    mask_drug = explain(data, device, decoding_type, iqr_baseline)
     # mask_cell = explain_cell_line(data, device)
     # print(mask_drug)
     # print(mask_cell)

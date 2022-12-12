@@ -206,20 +206,22 @@ def draw_one(save_path, name, ranked_ss, ranked_genes, top_n=25):
     index = ranked_genes[:top_n]
     
     plt.clf()
-    fig, ax = plt.subplots(figsize=(250, 20))
-    sns.set(font_scale=5)
+    fig, ax = plt.subplots(figsize=(200, 20))
+    sns.set(font_scale=10)
 
 
     res = sns.heatmap(values.reshape(1, -1))
     # plt.xticks(np.arange(100), temp[:100])
-    res.set_xticklabels(index)
+    res.set_xticklabels(index, 
+                        # fontdict={'fontsize':100}, 
+                        rotation=90)
     res.set_yticklabels([])
 
     # plt.show()
-    fig.savefig(os.path.join(save_path, name + '.png'))
+    fig.savefig(os.path.join(save_path, name + '.png'), bbox_inches="tight", pad_inches=1)
 
 
-def draw_gene_saliency(rank_dict, sal_dict, gene_list, save_path):
+def draw_gene_saliency(rank_dict, sal_dict, gene_list, save_path, top_n=25):
     i = 0
     for key in sal_dict.keys():
         i += 1
@@ -230,4 +232,4 @@ def draw_gene_saliency(rank_dict, sal_dict, gene_list, save_path):
         ranked_ss = sal_score[rnk]
         ranked_genes = gene_list[rnk]
 
-        draw_one(save_path, key, ranked_ss, ranked_genes)
+        draw_one(save_path, key, ranked_ss, ranked_genes, top_n)
