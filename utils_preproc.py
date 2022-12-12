@@ -302,8 +302,10 @@ def smile_to_graph_X(smile, do_ordinary_atom_feat, do_mol_ecfp, fpl=None, do_edg
             # print(temp_feat)
 
             if use_relational_edge:
+                # print('creating relational mol graph')
                 this_feat = np.array([q])
             else:
+                # print('creating non-relational mol graph')
                 this_feat = np.array(temp_feat)
 
             edge_dict[(bond.GetBeginAtomIdx(),
