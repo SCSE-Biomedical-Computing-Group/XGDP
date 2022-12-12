@@ -92,7 +92,8 @@ def draw_mol_saliency_scores(drug_sal_dict, smiles_dict, edge_index_dict, save_p
         # print(min_ss, max_ss)
 
         for edge, value in edge_ss_dict.items():
-            edge_ss_dict[edge] = (value - min_ss)/(max_ss - min_ss)
+            # edge_ss_dict[edge] = (value - min_ss)/(max_ss - min_ss)
+            edge_ss_dict[edge] = -1 + 2*(value - min_ss)/(max_ss - min_ss)
             edge_ss_dict[edge] = edge_ss_dict[edge].round(2)
 
         smiles = smiles_dict[k]
@@ -115,7 +116,7 @@ def draw_mol_saliency_scores(drug_sal_dict, smiles_dict, edge_index_dict, save_p
         if annotation_type == 0:
             Chem.Draw.MolToImageFile(mol, os.path.join(save_path, k + '.png'), size = (1000, 1000))
         elif annotation_type == 1 or annotation_type == 2:
-            canvas = mapvalues2mol(mol, bond_weights = bond_weights)
+            canvas = mapvalues2mol(mol, bond_weights = bond_weights, color='bwr', value_lims=[-1,1])
             img = transform2png(canvas.GetDrawingText())
             img.save(os.path.join(save_path, k + '.png'))
 
