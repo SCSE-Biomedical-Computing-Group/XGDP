@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU
-from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv, GINEConv, GINConv, RGATConv, RGCNConv
+from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv, GINEConv, GINConv, RGATConv, RGCNConv, MultiheadAttention
 from torch_geometric.nn import global_max_pool as gmp
 from torch_geometric.nn import global_add_pool
 
