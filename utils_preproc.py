@@ -554,9 +554,11 @@ def preproc_gene_expr(ccle_expr, meta_data, top_n=1000, filter_by_l1000 = False)
     if filter_by_l1000:
         l1000_gene_df = pd.read_csv('data/landmark_genes.txt', sep='\t', header=0)
         landmark_genes = l1000_gene_df['Symbol'].values
+        ccle_expr.columns = [c.split(' (')[0] for c in ccle_expr.columns]
         ccle_genes = ccle_expr.columns.values
         selected_genes = np.intersect1d(landmark_genes, ccle_genes)
         filtered_expr = ccle_expr[selected_genes]
+        print('number of preserved landmark genes:', len(selected_genes))
     else:
         # remove genes with low expression levels and select top n (default=1000) genes according to variance
         ccle_expr = ccle_expr.loc[:,

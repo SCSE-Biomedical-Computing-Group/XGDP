@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from math import sqrt
 from scipy import stats
+from sklearn.metrics import r2_score
 
 from torch_geometric.data import InMemoryDataset
 # from torch_geometric.loader import DataLoader     # for pyg >= 2.0
@@ -242,6 +243,11 @@ def pearson(y, f):
 def spearman(y, f):
     rs = stats.spearmanr(y, f)[0]
     return rs
+
+
+def coeffi_determ(y, f):
+    r2 = r2_score(y, f)
+    return r2
 
 
 def ci(y, f):

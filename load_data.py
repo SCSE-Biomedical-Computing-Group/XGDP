@@ -96,13 +96,19 @@ if (randomize):
         size1_X = int(xd_X.shape[0] * 0.9)
 
 else:
-    bExist_train = bExist[:int(bExist.shape[0]*0.8), :]
-    bExist_val = bExist[int(bExist.shape[0]*0.8):int(bExist.shape[0]*0.9), :]
+    if use_cross_validation:
+        bExist_cv = bExist[:int(bExist.shape[0]*0.75), :]
+    else:
+        bExist_train = bExist[:int(bExist.shape[0]*0.8), :]
+        bExist_val = bExist[int(bExist.shape[0]*0.8):int(bExist.shape[0]*0.9), :]
     bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
     # print(bExist_train.sum(), bExist_val.sum(), bExist_test.sum())
 
-    size_X = int(bExist_train.sum())
-    size1_X = int(bExist_train.sum() + bExist_val.sum())
+    if use_cross_validation:
+        size_X = int(bExist_cv.sum())
+    else:
+        size_X = int(bExist_train.sum())
+        size1_X = int(bExist_train.sum() + bExist_val.sum())
 
 if use_cross_validation:
     xd_cv_X = xd_X[:size_X]
@@ -177,7 +183,7 @@ print(f"branch_folder = {branch_folder}")
 
 this_branch = branch_name
 if use_cross_validation:
-    data_cv = TestbedDataset(root='root_folder/'+ this_branch, dataset=dataset_X+'cv_mix', xd=xd_cv_X, xt=xc_cv_X, y=y_cv_X, smile_graph=smile_graph_X, dgl=dgl_cv_X, cosl = cosl_cv_X)
+    data_cv = TestbedDataset(root='root_folder/'+ this_branch, dataset=dataset_X+'_cv_mix', xd=xd_cv_X, xt=xc_cv_X, y=y_cv_X, smile_graph=smile_graph_X, dgl=dgl_cv_X, cosl = cosl_cv_X)
 else:
     train_data = TestbedDataset(root='root_folder/'+ this_branch, dataset=dataset_X+'_train_mix', xd=xd_train_X, xt=xc_train_X, y=y_train_X, smile_graph=smile_graph_X, dgl=dgl_train_X, cosl = cosl_train_X)
     val_data = TestbedDataset(root='root_folder/' + this_branch, dataset=dataset_X+'_val_mix', xd=xd_val_X, xt=xc_val_X, y=y_val_X, smile_graph=smile_graph_X, dgl=dgl_val_X, cosl = cosl_val_X)
