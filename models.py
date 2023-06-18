@@ -788,7 +788,7 @@ class RGCNNet(torch.nn.Module):
 
         # x, edge_index, batch = data.x, data.edge_index, data.batch
         # edge_index = edge_index.long()
-        edge_feat = edge_feat.squeeze()
+        edge_feat = edge_feat.long().squeeze()
 
         x = self.conv1(x, edge_index, edge_type=edge_feat)
         x = self.relu(x)
@@ -867,7 +867,8 @@ class WIRGATNet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
             self.cross_attn = nn.MultiheadAttention(output_dim, num_heads=8)
@@ -973,7 +974,8 @@ class ARGATNet(torch.nn.Module):
             in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
         self.pool_xt_3 = nn.MaxPool1d(3)
         # self.fc1_xt = nn.Linear(2944, output_dim)
-        self.fc1_xt = nn.Linear(4224, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
             self.cross_attn = nn.MultiheadAttention(output_dim, num_heads=8)
