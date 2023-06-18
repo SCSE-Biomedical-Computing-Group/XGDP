@@ -49,7 +49,10 @@ def predicting(model, device, loader, return_attention_weights = False):
             if return_attention_weights:
                 # output, _, attn_weights = model(x, edge_index, x_cell_mut, batch_drug, edge_feat, return_attention_weights)
                 output, attn_weights = model(x, edge_index, batch_drug, x_cell_mut, edge_feat, return_attention_weights)
-                attn_weights = attn_weights.cpu().numpy()
+                attn_weights = [attn_weight.cpu().numpy() for attn_weight in attn_weights]
+                # print(attn_weights)
+                attn_weights = np.array(attn_weights)
+                # print(attn_weights.shape)
             else: 
                 # output, _ = model(x, edge_index, x_cell_mut, batch_drug, edge_feat)
                 output = model(x, edge_index, batch_drug, x_cell_mut, edge_feat)
