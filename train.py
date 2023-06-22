@@ -47,6 +47,7 @@ parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, required=True, help="branch")
 parser.add_argument("-c", "--do_cv", action="store_true", default=False, help="add this flag to do cross validation")
 parser.add_argument("-a", "--do_attn", action="store_true", default=False, help="add this flag to combine features with attn layer")
+parser.add_argument("-x", "--xd_feat_size", type=int, default=334, help="xd_feat_size")
 
 args = parser.parse_args()
 model_type = args.model
@@ -54,6 +55,7 @@ gpu = args.gpu
 b = args.branch
 do_cv = args.do_cv
 do_attn = args.do_attn
+xd_feat_size = args.xd_feat_size
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
@@ -114,4 +116,4 @@ log_interval = 20
 cuda_name = gpu
 print(f"branch_folder = {branch_folder}")
 main_cv(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interval, cuda_name, br_fol=branch_folder,
-     result_folder=result_folder, model_folder=model_folder, save_name=save_name, return_attention_weights=return_attention_weights, do_save=True, do_attn=do_attn)
+     result_folder=result_folder, model_folder=model_folder, save_name=save_name, return_attention_weights=return_attention_weights, do_save=True, do_attn=do_attn, xd_feat_size=xd_feat_size)

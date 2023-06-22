@@ -181,7 +181,7 @@ def main(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interv
         draw_pearson(val_pearsons, result_folder + pearson_fig_name)
 
 
-def main_cv(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interval, cuda_name, br_fol, result_folder, model_folder, save_name, return_attention_weights, do_save = True, do_attn = True):
+def main_cv(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_interval, cuda_name, br_fol, result_folder, model_folder, save_name, return_attention_weights, do_save = True, do_attn = True, xd_feat_size = 334):
     print('Learning rate: ', lr)
     print('Epochs: ', num_epoch)
 
@@ -218,7 +218,7 @@ def main_cv(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_int
         print("CPU/GPU: ", torch.cuda.is_available())
 
         # training the model
-        model = modeling(use_attn = do_attn).to(device)
+        model = modeling(num_features_xd = xd_feat_size, use_attn = do_attn).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         best_mse = 1000
         best_pearson = 0
