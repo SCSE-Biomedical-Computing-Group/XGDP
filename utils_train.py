@@ -198,7 +198,7 @@ def main_cv(modeling, train_batch, val_batch, test_batch, lr, num_epoch, log_int
     test_data = TestbedDataset(root=br_fol, dataset=dataset+'_test_mix')
     test_loader = DataLoader(test_data, batch_size=test_batch, shuffle=False)
 
-    kf = KFold(n_splits=3)
+    kf = KFold(n_splits=9)
     device = torch.device(cuda_name if torch.cuda.is_available() else "cpu")
     print(device)
     best_model_id = 0
