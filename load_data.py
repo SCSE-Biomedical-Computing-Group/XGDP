@@ -56,7 +56,7 @@ do_edge_features = True
 do_atom_ecfp = True
 ecfp_radius = 4   # this is actually radius + 1, set it to 4 for ECFP6  (256 features)
 use_radius = None
-use_relational_edge = True
+use_relational_edge = False
 
 # only applicable to gene expression data, not CNV data
 top_n_gene = 1000   # use top_n_gene = None to involve all genes 
@@ -90,18 +90,19 @@ if (randomize):
     np.random.shuffle(cosl)
 
     if use_cross_validation:
-        size_X = int(xd_X.shape[0] * 0.9)
+        size_X = int(xd_X.shape[0] * 0.75)
     else:
         size_X = int(xd_X.shape[0] * 0.8)
         size1_X = int(xd_X.shape[0] * 0.9)
 
 else:
     if use_cross_validation:
-        bExist_cv = bExist[:int(bExist.shape[0]*0.9), :]
+        bExist_cv = bExist[:int(bExist.shape[0]*0.75), :]
+        bExist_test = bExist[int(bExist.shape[0]*0.75):, :]
     else:
         bExist_train = bExist[:int(bExist.shape[0]*0.8), :]
         bExist_val = bExist[int(bExist.shape[0]*0.8):int(bExist.shape[0]*0.9), :]
-    bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
+        bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
     # print(bExist_train.sum(), bExist_val.sum(), bExist_test.sum())
 
     if use_cross_validation:
