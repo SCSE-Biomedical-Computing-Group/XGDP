@@ -20,6 +20,7 @@ parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
 parser.add_argument("-e", "--explain_type", type=int,
                     default=1, help="explain type: 0:model, 1:phenomenon")
+parser.add_argument("-a", "--do_attn", action="store_true", default=False, help="add this flag to combine features with attn layer")
 
 args = parser.parse_args()
 model_type = args.model
@@ -27,6 +28,7 @@ model_type = args.model
 gpu = args.gpu
 b = args.branch
 exp = args.explain_type
+do_attn = args.do_attn
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
@@ -37,8 +39,9 @@ device = torch.device(gpu if torch.cuda.is_available() else "cpu")
 # model = GATNet_E()
 # model_path = 'root_folder/root_002/results/model_GAT_Edge-EP300-SW801010_GDSC.model'
 
-model = [GCNNet(), GATNet(), GATNet_E(), GATv2Net(), SAGENet(), GINNet(),
-         GINENet(), WIRGATNet(), ARGATNet(), RGCNNet()][model_type]
+model_class = [GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet,
+         GINENet, WIRGATNet, ARGATNet, RGCNNet][model_type]
+model = model_class(use_attn=do_attn)
 model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE',
               'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN'][model_type]
 
