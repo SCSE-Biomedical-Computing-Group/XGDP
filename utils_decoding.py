@@ -70,6 +70,8 @@ def make_edge_dict(loader):
 def draw_mol_saliency_scores(drug_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
     for k, v in drug_sal_dict.items():
         print('working on ', k)
+
+        # TODO: write standardize function of bond and atom saliency scores
         edge_index = edge_index_dict[k]
         # norm_v = (v - v.min()) /(v.max() - v.min())
 
