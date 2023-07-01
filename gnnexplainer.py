@@ -40,7 +40,7 @@ model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE', 'WIRGAT'
 explanation_type = ['model', 'phenomenon'][exp]
 
 branch_folder = "root_folder/root_" + b
-model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC.model')
+model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC_best.model')
 
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.to(device)
