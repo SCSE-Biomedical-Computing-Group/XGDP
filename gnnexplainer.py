@@ -86,7 +86,7 @@ save_path_edge = os.path.join(branch_folder, 'Saliency/GNNExplainer/Bonds/' + ex
 os.makedirs(save_path_node, exist_ok=True)
 os.makedirs(save_path_edge, exist_ok=True)
 
-for idx, data in tqdm(enumerate(test_loader)):
+for idx, data in enumerate(tqdm(test_loader)):
     # print(idx)
     drug_name = data.drug_name[0]
     cell_line_name = data.cell_line_name[0]
