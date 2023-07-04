@@ -6,7 +6,7 @@ import os, argparse
 
 from yaml import parse
 from utils_preproc import preproc_gene_expr, save_gene_expr_matrix_X
-from utils_decoding import normalize_ss, rank_ss, draw_one, draw_gene_saliency, make_ss_dict
+from utils_decoding import normalize_ss, rank_ss, draw_one, draw_gene_saliency, make_gene_ss_dict
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN")
@@ -55,10 +55,12 @@ else:
         
 os.makedirs(save_path, exist_ok=True)
 
-_, _, genes = save_gene_expr_matrix_X(top_n=13143)
+# _, _, genes = save_gene_expr_matrix_X(top_n=13143)
+_, _, genes = save_gene_expr_matrix_X(filter_by_l1000=True)
 genes = genes.values
-gene_list = np.array([g.split(' (')[0] for g in genes])
-drug_dict, sal_dict =  make_ss_dict(ss_path, type=agg_type)
+# gene_list = np.array([g.split(' (')[0] for g in genes])
+gene_list = genes
+drug_dict, sal_dict =  make_gene_ss_dict(ss_path, type=agg_type)
 norm_sal_dict = normalize_ss(sal_dict)
 rank_dict = rank_ss(norm_sal_dict)
 draw_gene_saliency(rank_dict, norm_sal_dict, gene_list, save_path, top_n=50)
