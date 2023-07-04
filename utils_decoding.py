@@ -8,9 +8,40 @@ from rdkit_heatmaps.molmapping import mapvalues2mol
 from rdkit_heatmaps.utils import transform2png
 import matplotlib.pylab as plt
 import os
+from tqdm import tqdm
 from collections import defaultdict
 
-def make_ss_dict(dir, type='drug'):
+def make_ss_dict(atom_dir, bond_dir, type='drug'):
+    num_dict = dict()
+    atom_sal_dict = dict()
+    bond_sal_dict = dict()
+    for filename in os.listdir(bond_dir):
+        if type == 'drug':
+            name = filename.split('_')[1]
+        else:
+            name = filename.split('_')[2].split('.')[0]
+
+        one_atom = np.load(os.path.join(atom_dir, filename))    # filename is the same for atom and bond
+        one_atom = one_atom.reshape(-1)
+        one_bond = np.load(os.path.join(bond_dir, filename))
+        if name not in num_dict.keys() and name not in bond_sal_dict.keys():
+            num_dict[name] = 1
+            atom_sal_dict[name] = one_atom
+            bond_sal_dict[name] = one_bond
+        else:
+            num_dict[name] += 1
+            atom_sal_dict[name] = np.add(atom_sal_dict[name], one_atom)
+            bond_sal_dict[name] = np.add(bond_sal_dict[name], one_bond)
+    
+    for k, v in bond_sal_dict.items():
+        bond_sal_dict[k] = v/num_dict[k]
+
+    for k, v in atom_sal_dict.items():
+        atom_sal_dict[k] = v/num_dict[k]
+    
+    return num_dict, atom_sal_dict, bond_sal_dict
+
+def make_gene_ss_dict(dir, type='drug'):
     num_dict = dict()
     sal_dict = dict()
     for filename in os.listdir(dir):
@@ -31,7 +62,6 @@ def make_ss_dict(dir, type='drug'):
         sal_dict[k] = v/num_dict[k]
     
     return num_dict, sal_dict
-
 
 # def make_cell_dict(dir):
 #     drug_dict = dict()
@@ -67,9 +97,9 @@ def make_edge_dict(loader):
     return smiles_dict, edge_index_dict
 
 
-def draw_mol_saliency_scores(drug_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
-    for k, v in drug_sal_dict.items():
-        print('working on ', k)
+def draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
+    for k, v in tqdm(edge_sal_dict.items()):
+        # print('working on ', k)
 
         # TODO: write standardize function of bond and atom saliency scores
         edge_index = edge_index_dict[k]
@@ -98,6 +128,9 @@ def draw_mol_saliency_scores(drug_sal_dict, smiles_dict, edge_index_dict, save_p
             edge_ss_dict[edge] = -1 + 2*(value - min_ss)/(max_ss - min_ss)
             edge_ss_dict[edge] = edge_ss_dict[edge].round(2)
 
+        stand_node_sal = -1 + 2*(node_sal_dict[k] - node_sal_dict[k].min())/(node_sal_dict[k].max() - node_sal_dict[k].min())
+        stand_node_sal = stand_node_sal.round(2)
+
         smiles = smiles_dict[k]
         mol = Chem.MolFromSmiles(smiles)
         AllChem.EmbedMolecule(mol)
@@ -114,11 +147,23 @@ def draw_mol_saliency_scores(drug_sal_dict, smiles_dict, edge_index_dict, save_p
             elif annotation_type == 2:
                 bond.SetProp('bondNote',str(edge_ss_dict[(u, v)]))
                 bond_weights.append(edge_ss_dict[(u, v)])
+            else:
+                raise ValueError('annotation_type should be 0, 1, or 2')
         
+        for i, atom in enumerate(mol.GetAtoms()):
+            if annotation_type == 0:
+                atom.SetProp('atomNote',str(stand_node_sal[i]))
+            elif annotation_type == 1:
+                pass
+            elif annotation_type == 2:
+                atom.SetProp('atomNote',str(stand_node_sal[i]))
+            else:
+                raise ValueError('annotation_type should be 0, 1, or 2')
+            
         if annotation_type == 0:
             Chem.Draw.MolToImageFile(mol, os.path.join(save_path, k + '.png'), size = (1000, 1000))
         elif annotation_type == 1 or annotation_type == 2:
-            canvas = mapvalues2mol(mol, bond_weights = bond_weights, color='bwr', value_lims=[-1,1])
+            canvas = mapvalues2mol(mol, atom_weights = stand_node_sal, bond_weights = bond_weights, color='bwr', value_lims=[-1,1])
             img = transform2png(canvas.GetDrawingText())
             img.save(os.path.join(save_path, k + '.png'))
 
@@ -226,10 +271,10 @@ def draw_one(save_path, name, ranked_ss, ranked_genes, top_n=25):
 
 def draw_gene_saliency(rank_dict, sal_dict, gene_list, save_path, top_n=25):
     i = 0
-    for key in sal_dict.keys():
+    for key in tqdm(sal_dict.keys()):
         i += 1
-        print('working on ', key)
-        print('progress: ', i, '/', len(sal_dict))
+        # print('working on ', key)
+        # print('progress: ', i, '/', len(sal_dict))
         rnk = rank_dict[key]
         sal_score = sal_dict[key].reshape(-1)
         ranked_ss = sal_score[rnk]
