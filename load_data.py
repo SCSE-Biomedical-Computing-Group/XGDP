@@ -70,7 +70,7 @@ xd_X, xc_X, y_X, dgl, cosl, bExist = save_mix_drug_geneexpr_matrix_X(do_ordinary
 # print(smile_graph_X)
 
 # for blind test (drugs appearing in the testing set do not appear in the training set), set randomize = False
-randomize = True
+randomize = False
 seed = 19871731 ## start from 19871729, add one each time for multiple testing
 
 if (randomize):

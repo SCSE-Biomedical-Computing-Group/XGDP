@@ -59,6 +59,8 @@ class GCNNet(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
         else: 
             self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -110,7 +112,11 @@ class GCNNet(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
@@ -162,6 +168,8 @@ class GATNet(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
         else:
             self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -175,7 +183,7 @@ class GATNet(torch.nn.Module):
     def forward(self, x, edge_index, batch, x_cell_mut, edge_feat, return_attention_weights=False):
         # graph input feed-forward
         # x, edge_index, batch = data.x, data.edge_index, data.batch
-        x = self.dropout(x)
+        # x = self.dropout(x)
         # x = F.dropout(x, p=0.2, training=self.training)
         x = F.elu(self.gcn1(x, edge_index))
         # x = F.dropout(x, p=0.2, training=self.training)
@@ -210,7 +218,11 @@ class GATNet(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
@@ -269,6 +281,8 @@ class GATv2Net(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
         else:
             self.fc1 = nn.Linear(2*output_dim, 1024)
@@ -286,7 +300,7 @@ class GATv2Net(torch.nn.Module):
         # print(edge_feat.shape)
 
         # x = F.dropout(x, p=0.2, training=self.training)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = F.elu(self.gcn1(x, edge_index, edge_attr=edge_feat))
         x = self.dropout(x)
         # x = F.dropout(x, p=0.2, training=self.training)
@@ -320,7 +334,11 @@ class GATv2Net(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
@@ -377,6 +395,8 @@ class GATNet_E(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, output_dim)
         else:
             # combined layers
@@ -401,7 +421,7 @@ class GATNet_E(torch.nn.Module):
         # print(data.x.shape)
 
         # x = F.dropout(x, p=0.2, training=self.training)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = F.elu(self.gcn1(x, edge_index, edge_attr=edge_feat))
         # x = F.dropout(x, p=0.2, training=self.training)
         x = self.dropout(x)
@@ -435,7 +455,11 @@ class GATNet_E(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
@@ -813,6 +837,8 @@ class RGCNNet(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, output_dim)
         else:
             # combined layers
@@ -866,7 +892,11 @@ class RGCNNet(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
@@ -918,6 +948,8 @@ class WIRGATNet(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
         else:
             # combined layers
@@ -944,7 +976,7 @@ class WIRGATNet(torch.nn.Module):
         # print(edge_feat)
 
         # x = F.dropout(x, p=0.2, training=self.training)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = F.elu(self.gcn1(x, edge_index, edge_type=edge_feat))
         # x = F.dropout(x, p=0.2, training=self.training)
         x = self.dropout(x)
@@ -978,7 +1010,11 @@ class WIRGATNet(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
@@ -1034,6 +1070,8 @@ class ARGATNet(torch.nn.Module):
         if self.use_attn:
             self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
             self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
         else:
             # combined layers
@@ -1093,7 +1131,11 @@ class ARGATNet(torch.nn.Module):
 
         if self.use_attn:
             xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
             xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
             xc = torch.cat((xc1, xc2), 1)
             xc = self.relu(xc)
             xc = self.dropout(xc)
