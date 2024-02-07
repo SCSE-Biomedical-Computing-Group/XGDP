@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU
-from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv, GINEConv, GINConv, RGATConv, RGCNConv
+from torch_geometric.nn import GCNConv, GATConv, GATv2Conv, SAGEConv, GINEConv, GINConv, RGATConv, RGCNConv, FiLMConv
 from torch_geometric.nn import global_max_pool as gmp
 from torch_geometric.nn import global_add_pool
 
@@ -1097,7 +1097,7 @@ class ARGATNet(torch.nn.Module):
         edge_feat = edge_feat.int().squeeze()
 
         # x = F.dropout(x, p=0.2, training=self.training)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = F.elu(self.gcn1(x, edge_index, edge_type=edge_feat))
         # x = F.dropout(x, p=0.2, training=self.training)
         x = self.dropout(x)
@@ -1159,3 +1159,116 @@ class ARGATNet(torch.nn.Module):
             return out, attn_weights
         else:
             return out
+
+
+class FiLMNet(torch.nn.Module):
+    def __init__(self, num_features_xd=334, n_output=1, num_features_xt=25,
+                 n_filters=32, embed_dim=128, output_dim=128, dropout=0.5, use_attn=False):
+        super(FiLMNet, self).__init__()
+        self.use_attn = use_attn
+
+        # graph layers
+        self.gcn1 = FiLMConv(num_features_xd, num_features_xd, num_relations=4, act=nn.LeakyReLU())
+        self.gcn2 = FiLMConv(num_features_xd, output_dim, num_relations=4, act=nn.LeakyReLU())
+
+        self.fc_g1 = nn.Linear(output_dim, output_dim)
+
+        # cell line feature
+        self.conv_xt_1 = nn.Conv1d(
+            in_channels=1, out_channels=n_filters, kernel_size=8)
+        self.pool_xt_1 = nn.MaxPool1d(3)
+        self.conv_xt_2 = nn.Conv1d(
+            in_channels=n_filters, out_channels=n_filters*2, kernel_size=8)
+        self.pool_xt_2 = nn.MaxPool1d(3)
+        self.conv_xt_3 = nn.Conv1d(
+            in_channels=n_filters*2, out_channels=n_filters*4, kernel_size=8)
+        self.pool_xt_3 = nn.MaxPool1d(3)
+        # self.fc1_xt = nn.Linear(2944, output_dim)
+        # self.fc1_xt = nn.Linear(4224, output_dim)
+        self.fc1_xt = nn.Linear(4096, output_dim)
+
+        if self.use_attn:
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.norm1 = nn.LayerNorm(output_dim)
+            self.norm2 = nn.LayerNorm(output_dim)
+            self.fc = nn.Linear(2*output_dim, 128)
+        else:
+            # combined layers
+            self.fc1 = nn.Linear(2*output_dim, 1024)
+            self.fc2 = nn.Linear(1024, 128)
+        self.out = nn.Linear(128, n_output)
+
+        # activation and regularization
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x, edge_index, batch, x_cell_mut, edge_feat, return_attention_weights=False):
+        '''
+        x: feature matrix of molecular graph
+        target: gene mutation data
+        edge_index: edges of molecular graph
+        batch
+        edge_feat: edge features of molecular graph
+        '''
+        # graph input feed-forward
+        # x, edge_index, batch, edge_feat = data.x, data.edge_index, data.batch, data.edge_features
+        # print(data.x.shape)
+        edge_feat = edge_feat.int().squeeze()
+
+        # x = F.dropout(x, p=0.2, training=self.training)
+        # x = self.dropout(x)
+        self.gcn1(x, edge_index, edge_type=edge_feat)
+        # x = F.dropout(x, p=0.2, training=self.training)
+        x = self.dropout(x)
+        x = self.gcn2(x, edge_index, edge_type=edge_feat)
+        # x = self.relu(x)
+        x = gmp(x, batch)          # global max pooling
+        x = self.fc_g1(x)
+        x = self.relu(x)
+
+        # protein input feed-forward:
+        # target = data.target
+        # x_cell_mut = x_cell_mut[:,None,:]
+        # 1d conv layers
+        conv_xt = self.conv_xt_1(x_cell_mut)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_1(conv_xt)
+        conv_xt = self.conv_xt_2(conv_xt)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_2(conv_xt)
+        conv_xt = self.conv_xt_3(conv_xt)
+        conv_xt = F.relu(conv_xt)
+        conv_xt = self.pool_xt_3(conv_xt)
+
+        # flatten
+        xt = conv_xt.view(-1, conv_xt.shape[1] * conv_xt.shape[2])
+        xt = self.fc1_xt(xt)
+
+        if self.use_attn:
+            xc1, _ = self.cross_attn1(x, xt, xt)
+            xc1 = xc1 + x
+            xc1 = self.norm1(xc1)
+            xc2, _ = self.cross_attn2(xt, x, x)
+            xc2 = xc2 + xt
+            xc2 = self.norm2(xc2)
+            xc = torch.cat((xc1, xc2), 1)
+            xc = self.relu(xc)
+            xc = self.dropout(xc)
+            xc = self.fc(xc)
+            xc = self.relu(xc)
+            xc = self.dropout(xc)
+        else:
+            # concat
+            xc = torch.cat((x, xt), 1)
+            # add some dense layers
+            xc = self.fc1(xc)
+            xc = self.relu(xc)
+            xc = self.dropout(xc)
+            xc = self.fc2(xc)
+            xc = self.relu(xc)
+            xc = self.dropout(xc)
+        out = self.out(xc)
+        out = nn.Sigmoid()(out)
+
+        return out
