@@ -57,8 +57,8 @@ class GCNNet(torch.nn.Module):
 
         # combined layers
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
@@ -166,8 +166,8 @@ class GATNet(torch.nn.Module):
 
         # combined layers
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
@@ -279,8 +279,8 @@ class GATv2Net(torch.nn.Module):
 
         # combined layers
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
@@ -393,8 +393,8 @@ class GATNet_E(torch.nn.Module):
         self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, output_dim)
@@ -835,8 +835,8 @@ class RGCNNet(torch.nn.Module):
         self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, output_dim)
@@ -946,8 +946,8 @@ class WIRGATNet(torch.nn.Module):
         self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
@@ -1068,8 +1068,8 @@ class ARGATNet(torch.nn.Module):
         self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
@@ -1188,8 +1188,8 @@ class FiLMNet(torch.nn.Module):
         self.fc1_xt = nn.Linear(4096, output_dim)
 
         if self.use_attn:
-            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8)
-            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8)
+            self.cross_attn1 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
+            self.cross_attn2 = nn.MultiheadAttention(output_dim, num_heads=8, dropout=dropout)
             self.norm1 = nn.LayerNorm(output_dim)
             self.norm2 = nn.LayerNorm(output_dim)
             self.fc = nn.Linear(2*output_dim, 128)
