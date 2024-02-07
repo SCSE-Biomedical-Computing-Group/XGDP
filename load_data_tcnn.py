@@ -71,7 +71,7 @@ xd_X, xc_X, y_X, dgl, cosl, bExist = save_mix_drug_geneexpr_matrix_X(do_ordinary
 
 
 # for blind test (drugs appearing in the testing set do not appear in the training set), set randomize = False
-randomize = False
+randomize = True
 seed = 19871731 ## start from 19871729, add one each time for multiple testing
 
 if (randomize):
@@ -99,10 +99,11 @@ if (randomize):
 else:
     if use_cross_validation:
         bExist_cv = bExist[:int(bExist.shape[0]*0.75), :]
+        bExist_test = bExist[int(bExist.shape[0]*0.75):, :]
     else:
         bExist_train = bExist[:int(bExist.shape[0]*0.8), :]
         bExist_val = bExist[int(bExist.shape[0]*0.8):int(bExist.shape[0]*0.9), :]
-    bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
+        bExist_test = bExist[int(bExist.shape[0]*0.9):, :]
     # print(bExist_train.sum(), bExist_val.sum(), bExist_test.sum())
 
     if use_cross_validation:
