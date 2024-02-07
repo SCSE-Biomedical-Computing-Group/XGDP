@@ -56,7 +56,7 @@ do_edge_features = True
 do_atom_ecfp = True
 ecfp_radius = 4   # this is actually radius + 1, set it to 4 for ECFP6  (256 features)
 use_radius = None
-use_relational_edge = False
+use_relational_edge = True
 
 # only applicable to gene expression data, not CNV data
 top_n_gene = 1000   # use top_n_gene = None to involve all genes 
@@ -70,7 +70,7 @@ xd_X, xc_X, y_X, dgl, cosl, bExist = save_mix_drug_geneexpr_matrix_X(do_ordinary
 # print(smile_graph_X)
 
 # for blind test (drugs appearing in the testing set do not appear in the training set), set randomize = False
-randomize = False
+randomize = True
 seed = 19871731 ## start from 19871729, add one each time for multiple testing
 
 if (randomize):
