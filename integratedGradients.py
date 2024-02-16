@@ -40,7 +40,7 @@ model = model_class(use_attn=do_attn)
 model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN'][model_type]
 
 branch_folder = "root_folder/root_" + b
-model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC_best.model')
+model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC_best1.model')
 
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.to(device)

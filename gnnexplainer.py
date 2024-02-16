@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from tqdm import tqdm
 from utils_data import TestbedDataset
-from models import GATNet_E, GATNet, GCNNet, GATv2Net, GINNet, GINENet, SAGENet, WIRGATNet, ARGATNet, RGCNNet
+from models import GATNet_E, GATNet, GCNNet, GATv2Net, GINNet, GINENet, SAGENet, WIRGATNet, ARGATNet, RGCNNet, FiLMNet
 import argparse
 import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model", type=int, default=0,
-                    help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN")
+                    help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN, 10:FiLM")
 # parser.add_argument("-o", "--object", type=int, default=0, help="decoding object: 0:node features, 1:edge importance")
 parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
@@ -40,16 +40,16 @@ device = torch.device(gpu if torch.cuda.is_available() else "cpu")
 # model_path = 'root_folder/root_002/results/model_GAT_Edge-EP300-SW801010_GDSC.model'
 
 model_class = [GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet,
-         GINENet, WIRGATNet, ARGATNet, RGCNNet][model_type]
+         GINENet, WIRGATNet, ARGATNet, RGCNNet, FiLMNet][model_type]
 model = model_class(use_attn=do_attn)
 model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE',
-              'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN'][model_type]
+              'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN', 'FiLM'][model_type]
 
 explanation_type = ['model', 'phenomenon'][exp]
 
 branch_folder = "root_folder/root_" + b
 model_path = os.path.join(
-    branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC_best.model')
+    branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC_best1.model')
 
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.to(device)
