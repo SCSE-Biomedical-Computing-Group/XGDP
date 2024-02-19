@@ -10,6 +10,15 @@ import matplotlib.pylab as plt
 import os
 from tqdm import tqdm
 from collections import defaultdict
+from IPython.display import SVG, Image
+from rdkit import Chem
+from rdkit.Chem import rdDepictor,Descriptors
+from rdkit.Chem.Draw import rdMolDraw2D
+import matplotlib.cm as cm
+from matplotlib.colors import Normalize
+import re
+from EFGs import mol2frag
+import cairosvg
 
 def make_ss_dict(atom_dir, bond_dir, type='drug'):
     num_dict = dict()
@@ -98,6 +107,9 @@ def make_edge_dict(loader):
 
 
 def draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
+    '''
+        use the rdkit_heatmap pkg to visualize the saliency scores
+    '''
     for k, v in tqdm(edge_sal_dict.items()):
         # print('working on ', k)
 
@@ -166,6 +178,187 @@ def draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_ind
             canvas = mapvalues2mol(mol, atom_weights = stand_node_sal, bond_weights = bond_weights, color='bwr', value_lims=[-1,1])
             img = transform2png(canvas.GetDrawingText())
             img.save(os.path.join(save_path, k + '.png'))
+
+
+class drug_sal:
+    def __init__(self, name, smiles, node_score, edge_score, edge_idx):
+        self.name = name
+        self.smiles = smiles
+        self.node_score = node_score
+        self.edge_score = edge_score
+        self.edge_idx = edge_idx
+        
+    def decomp_fg(self, decoding_voc):
+        self.mol = Chem.MolFromSmiles(self.smiles)
+        self.fg, self.single_atom, self.fg_idx, self.atom_idx = mol2frag(self.mol, toEnd=True, vocabulary=list(decoding_voc), returnidx=True)
+        self.fg_atom_idx = [idx for subtuple in self.fg_idx for idx in subtuple]
+        self.single_atom_idx = [idx for subtuple in self.atom_idx for idx in subtuple]
+        
+    def compute_sal_score(self):
+        # node:
+        # stand_node_sal = -1 + 2*(self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
+        stand_node_sal = (self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
+        stand_node_sal = stand_node_sal.round(2)
+        new_sal_dict = {i:stand_node_sal[i] for i in self.single_atom_idx}
+        
+        for fg, idxes in zip(self.fg, self.fg_idx):
+            num = len(idxes)
+            fg_sal = [stand_node_sal[i] for i in idxes]
+            fg_score = sum(fg_sal)/num
+            new_sal_dict[idxes[0]] = fg_score
+            
+        self.node_sal_dict = new_sal_dict    # this is a dict
+        
+        # edge:
+        edge_ss_dict = defaultdict(float)
+        counts = defaultdict(int)
+        for val, x, y in zip(self.edge_score, *self.edge_idx):
+            if x > y:
+                x, y = y, x
+            edge_ss_dict[(x, y)] += val
+            counts[(x, y)] += 1
+            
+        for edge, count in counts.items():
+            edge_ss_dict[edge] /= count
+            
+        min_ss = min(edge_ss_dict.values())
+        max_ss = max(edge_ss_dict.values())
+        
+        for edge, value in edge_ss_dict.items():
+            edge_ss_dict[edge] = (value - min_ss)/(max_ss - min_ss)
+            # edge_ss_dict[edge] = -1 + 2*(value - min_ss)/(max_ss - min_ss)
+            edge_ss_dict[edge] = edge_ss_dict[edge].round(2)
+            
+        bond_weights = []
+        for i, bond in enumerate(self.mol.GetBonds()):
+            u, v = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            # print(u, v)
+            if u > v:
+                u, v = v, u
+            #     continue
+            # else:
+            # bond_weights[i] = edge_ss_dict[(u, v)]
+            bond_weights.append(edge_ss_dict[(u, v)])
+            
+        self.edge_sal = bond_weights    # this is a list
+
+    def in_same_fg(self, atom1, atom2):
+        for fg in self.fg_idx:
+            if atom1 in fg and atom2 in fg:
+                return True
+        return False
+        
+    def compute_color(self):
+        my_cmap = cm.get_cmap('coolwarm')
+        patt = r'[C,H][0-9]{2}[0,-1,1]'
+        # Get normalize function (takes data in range [vmin, vmax] -> [0, 1])
+        my_norm = Normalize(vmin=0, vmax=1)
+        
+        self.atommap, self.bondmap = {}, {}
+        for s,i in zip(self.fg+self.single_atom, self.fg_idx+self.atom_idx):
+            # print("s and i:", s, i)
+            self.atommap.update({x:my_cmap(my_norm(self.node_sal_dict[i[0]]))[:3] for x in i})
+            
+        for b in self.mol.GetBonds():
+            b_id = b.GetIdx()
+            # print(b_id)
+            score = self.edge_sal[b_id]
+            # TODO: now the bond across two FGs is also drawn, fix it
+            # if b.GetBeginAtomIdx() in self.fg_atom_idx and b.GetEndAtomIdx() in self.fg_atom_idx:    # if the bond is in FG
+            #     self.bondmap[b_id] = self.atommap[b.GetBeginAtomIdx()]
+            # else:    # if the bond is between FG and atoms
+            #     self.bondmap[b_id] = my_cmap(my_norm(score))[:3]
+            if self.in_same_fg(b.GetBeginAtomIdx(), b.GetEndAtomIdx()):
+                self.bondmap[b_id] = self.atommap[b.GetBeginAtomIdx()]
+            
+        self.highlights = {
+            "highlightAtoms": list(self.atommap.keys()),
+            "highlightAtomColors": self.atommap,
+            "highlightBonds": list(self.bondmap.keys()),
+            "highlightBondColors": self.bondmap,
+        }
+        
+    def draw_mol(self, asMol=False, label=None, path='', imgsize=(800, 600)):
+        '''
+        highlights is a dictionary, which may contains:
+        highlightAtoms: list
+        highlightBonds: list
+        highlightAtomRadii: dict[int]=float, atom index (int), radius (float)
+        highlightAtomColors: dict[int]=tuple, index (int), color (tuple, length=3)
+        highlightBondColors: dict[int]=tuple,index (int), color (tuple, length=3)
+        '''
+        smiles = self.smiles
+        node_score = self.node_sal_dict
+        edge_score = self.edge_sal
+        hightlights = self.highlights
+        svg_path = path + '_svg'
+        os.makedirs(svg_path, exist_ok=True)
+        svg_filename = os.path.join(svg_path, self.name + '.svg')
+        filename = os.path.join(path, self.name + '.png')
+        
+        if asMol:
+            mol = self.smiles.__copy__()
+        else:
+            mol = self.mol
+        # try:
+        mol = rdMolDraw2D.PrepareMolForDrawing(mol)
+        # if '.png' in filename:
+        #     drawer = rdMolDraw2D.MolDraw2DCairo(*imgsize)
+        # else:
+        drawer = rdMolDraw2D.MolDraw2DSVG(*imgsize)
+        opts = drawer.drawOptions()
+        if label == 'map':
+            for i in range(mol.GetNumAtoms()):
+                opts.atomLabels[i] = mol.GetAtomWithIdx(
+                    i).GetSymbol()+str(mol.GetAtomWithIdx(i).GetAtomMapNum())
+        if label == 'idx':
+            for i in range(mol.GetNumAtoms()):
+                opts.atomLabels[i] = mol.GetAtomWithIdx(i).GetSymbol()+str(i)
+        if label == 'score':
+            assert node_score is not None
+            assert edge_score is not None
+
+            for atom in mol.GetAtoms():
+                idx = atom.GetIdx()
+                if idx in node_score.keys():
+                    atom.SetProp("atomNote", str(round(node_score[idx], 2)))
+
+            for bond in mol.GetBonds():
+                idx = bond.GetIdx()
+                bond.SetProp("bondNote", str(round(edge_score[idx], 2)))
+        if not self.highlights:
+            drawer.DrawMolecule(mol)
+        else:
+            drawer.DrawMolecule(mol, **self.highlights)
+        drawer.FinishDrawing()
+        # if '.png' in path:
+        #     drawer.WriteDrawingText(path)
+            # display(Image(path))
+        # else:
+        svg = drawer.GetDrawingText()
+        # display(SVG(svg.replace('svg:','')))
+        if '.svg' in svg_filename:
+            with open(svg_filename, 'w') as wf:
+                print(svg, file=wf)
+            # Convert SVG to PNG
+            cairosvg.svg2png(url=svg_filename, write_to=filename)
+        return drawer
+        # except Exception as e:
+        #     print("Check your molecule!!!",e)
+        #     return
+
+
+def draw_fg_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
+    '''
+        draw the saliency scores according to the FGs
+    '''
+    for k, v in tqdm(edge_sal_dict.items()):
+        # print('working on ', k)
+        drug_sal_instance = drug_sal(k, smiles_dict[k], node_sal_dict[k], v, edge_index_dict[k])
+        drug_sal_instance.decomp_fg(decoding_voc)
+        drug_sal_instance.compute_sal_score()
+        drug_sal_instance.compute_color()
+        drug_sal_instance.draw_mol(label='score', path=save_path)
 
 
 def normalize_ss(sal_dict):

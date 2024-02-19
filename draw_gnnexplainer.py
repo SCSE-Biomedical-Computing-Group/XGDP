@@ -8,14 +8,15 @@ from utils_data import TestbedDataset
 # from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet, WIRGATNet, ARGATNet, RGCNNet
 from rdkit_heatmaps.molmapping import mapvalues2mol
 from rdkit_heatmaps.utils import transform2png
-from utils_decoding import make_ss_dict, make_edge_dict, draw_mol_saliency_scores
+from utils_decoding import make_ss_dict, make_edge_dict, draw_mol_saliency_scores, draw_fg_saliency_scores
+import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN")
 # parser.add_argument("-o", "--object", type=int, default=1, help="decoding object: 0:atoms, 1:bonds, 2:cell_line")
 # parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
-parser.add_argument("-a", "--annotation", type=int, default=2, help="annotation type: 0:numbers, 1:heatmap, 2:both")
+parser.add_argument("-a", "--annotation", type=int, default=3, help="annotation type: 0:numbers, 1:heatmap, 2:both, 3:functional group heatmap")
 parser.add_argument("-e", "--explain_type", type=int,
                     default=1, help="explain type: 0:model, 1:phenomenon")
 
@@ -46,6 +47,8 @@ elif annotation == 1:
     d_save_path = d_save_path + '/heatmap'
 elif annotation == 2:
     d_save_path = d_save_path + '/ss+heatmap'
+elif annotation == 3:
+    d_save_path = d_save_path + '/fg_heatmap'
 else:
     print('wrong annotation type!')
     exit()
@@ -55,4 +58,10 @@ os.makedirs(d_save_path, exist_ok=True)
 _, node_sal_dict, edge_sal_dict = make_ss_dict(d_node_path, d_edge_path)
 print('all drugs: ', edge_sal_dict.keys())
 smiles_dict, edge_idx_dict = make_edge_dict(test_loader)
-draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
+if annotation == 3:
+    with open('data/GDSC/decoding_vocabulary.pkl', 'rb') as file:
+        decoding_voc = pickle.load(file)
+    print('decoding vocabulary: ', decoding_voc)
+    draw_fg_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
+else:
+    draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
