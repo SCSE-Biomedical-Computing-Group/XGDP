@@ -12,6 +12,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from IPython.display import SVG, Image
 from rdkit import Chem
+from rdkit import Geometry
 from rdkit.Chem import rdDepictor,Descriptors
 from rdkit.Chem.Draw import rdMolDraw2D
 import matplotlib.cm as cm
@@ -190,16 +191,23 @@ class drug_sal:
         
     def decomp_fg(self, decoding_voc):
         self.mol = Chem.MolFromSmiles(self.smiles)
-        self.fg, self.single_atom, self.fg_idx, self.atom_idx = mol2frag(self.mol, toEnd=True, vocabulary=list(decoding_voc), returnidx=True)
+        self.fg, self.non_fg, self.fg_idx, self.non_fg_idx = mol2frag(self.mol, toEnd=True, vocabulary=list(decoding_voc), returnidx=True)
         self.fg_atom_idx = [idx for subtuple in self.fg_idx for idx in subtuple]
-        self.single_atom_idx = [idx for subtuple in self.atom_idx for idx in subtuple]
+        self.non_fg_atom_idx = [idx for subtuple in self.non_fg_idx for idx in subtuple]
+        self.group_atom_idx = []
+        self.single_atom_idx = []
+        for subtuple in self.fg_idx+self.non_fg_idx:
+            if len(subtuple) == 1:
+                self.single_atom_idx.append(subtuple[0])
+            else:
+                self.group_atom_idx.append([idx for idx in subtuple])
         
     def compute_sal_score(self):
         # node:
         # stand_node_sal = -1 + 2*(self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
         stand_node_sal = (self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
         stand_node_sal = stand_node_sal.round(2)
-        new_sal_dict = {i:stand_node_sal[i] for i in self.single_atom_idx}
+        new_sal_dict = {i:stand_node_sal[i] for i in self.non_fg_atom_idx}
         
         for fg, idxes in zip(self.fg, self.fg_idx):
             num = len(idxes)
@@ -232,19 +240,15 @@ class drug_sal:
         bond_weights = []
         for i, bond in enumerate(self.mol.GetBonds()):
             u, v = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
-            # print(u, v)
             if u > v:
                 u, v = v, u
-            #     continue
-            # else:
-            # bond_weights[i] = edge_ss_dict[(u, v)]
             bond_weights.append(edge_ss_dict[(u, v)])
             
         self.edge_sal = bond_weights    # this is a list
 
     def in_same_fg(self, atom1, atom2):
-        for fg in self.fg_idx:
-            if atom1 in fg and atom2 in fg:
+        for group in self.group_atom_idx:
+            if atom1 in group and atom2 in group:
                 return True
         return False
         
@@ -261,13 +265,7 @@ class drug_sal:
             
         for b in self.mol.GetBonds():
             b_id = b.GetIdx()
-            # print(b_id)
             score = self.edge_sal[b_id]
-            # TODO: now the bond across two FGs is also drawn, fix it
-            # if b.GetBeginAtomIdx() in self.fg_atom_idx and b.GetEndAtomIdx() in self.fg_atom_idx:    # if the bond is in FG
-            #     self.bondmap[b_id] = self.atommap[b.GetBeginAtomIdx()]
-            # else:    # if the bond is between FG and atoms
-            #     self.bondmap[b_id] = my_cmap(my_norm(score))[:3]
             if self.in_same_fg(b.GetBeginAtomIdx(), b.GetEndAtomIdx()):
                 self.bondmap[b_id] = self.atommap[b.GetBeginAtomIdx()]
             
@@ -320,16 +318,34 @@ class drug_sal:
 
             for atom in mol.GetAtoms():
                 idx = atom.GetIdx()
-                if idx in node_score.keys():
+                if idx in self.single_atom_idx:
                     atom.SetProp("atomNote", str(round(node_score[idx], 2)))
 
             for bond in mol.GetBonds():
                 idx = bond.GetIdx()
-                bond.SetProp("bondNote", str(round(edge_score[idx], 2)))
+                if not self.in_same_fg(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()):
+                    bond.SetProp("bondNote", str(round(edge_score[idx], 2)))
+
         if not self.highlights:
             drawer.DrawMolecule(mol)
         else:
             drawer.DrawMolecule(mol, **self.highlights)
+
+        conformer = mol.GetConformer()
+        for fg in self.fg_idx:
+            if len(fg) == 1:
+                continue
+            pox = []
+            for aid in fg:
+                pos = conformer.GetAtomPosition(aid)
+                pox.append([pos.x, pos.y])
+            print(pox)
+            pox_arr = np.array(pox)
+            center = np.mean(pox_arr, axis=0)
+            print(center)
+            print(node_score[fg[0]])
+            drawer.DrawString(str(round(node_score[fg[0]], 2)), Geometry.Point2D(center[0], center[1]))
+            
         drawer.FinishDrawing()
         # if '.png' in path:
         #     drawer.WriteDrawingText(path)
