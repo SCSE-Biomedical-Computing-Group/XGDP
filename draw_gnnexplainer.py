@@ -61,7 +61,7 @@ smiles_dict, edge_idx_dict = make_edge_dict(test_loader)
 if annotation == 3:
     with open('data/GDSC/decoding_vocabulary.pkl', 'rb') as file:
         decoding_voc = pickle.load(file)
-    print('decoding vocabulary: ', decoding_voc)
+    # print('decoding vocabulary: ', decoding_voc)
     draw_fg_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
 else:
     draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
