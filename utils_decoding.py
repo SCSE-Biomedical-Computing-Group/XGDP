@@ -31,6 +31,7 @@ def make_ss_dict(atom_dir, bond_dir, type='drug'):
         else:
             name = filename.split('_')[2].split('.')[0]
 
+        # print(filename)
         one_atom = np.load(os.path.join(atom_dir, filename))    # filename is the same for atom and bond
         one_atom = one_atom.reshape(-1)
         one_bond = np.load(os.path.join(bond_dir, filename))
@@ -207,9 +208,9 @@ class drug_sal:
         # stand_node_sal = -1 + 2*(self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
         stand_node_sal = (self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
         stand_node_sal = stand_node_sal.round(2)
-        new_sal_dict = {i:stand_node_sal[i] for i in self.non_fg_atom_idx}
+        new_sal_dict = {i:stand_node_sal[i] for i in self.single_atom_idx}
         
-        for fg, idxes in zip(self.fg, self.fg_idx):
+        for idxes in self.group_atom_idx:
             num = len(idxes)
             fg_sal = [stand_node_sal[i] for i in idxes]
             fg_score = sum(fg_sal)/num
@@ -259,7 +260,7 @@ class drug_sal:
         my_norm = Normalize(vmin=0, vmax=1)
         
         self.atommap, self.bondmap = {}, {}
-        for s,i in zip(self.fg+self.single_atom, self.fg_idx+self.atom_idx):
+        for s,i in zip(self.fg+self.non_fg, self.fg_idx+self.non_fg_idx):
             # print("s and i:", s, i)
             self.atommap.update({x:my_cmap(my_norm(self.node_sal_dict[i[0]]))[:3] for x in i})
             
@@ -332,19 +333,16 @@ class drug_sal:
             drawer.DrawMolecule(mol, **self.highlights)
 
         conformer = mol.GetConformer()
-        for fg in self.fg_idx:
-            if len(fg) == 1:
+        for group in self.group_atom_idx:
+            if len(group) == 1:
                 continue
             pox = []
-            for aid in fg:
+            for aid in group:
                 pos = conformer.GetAtomPosition(aid)
                 pox.append([pos.x, pos.y])
-            print(pox)
             pox_arr = np.array(pox)
             center = np.mean(pox_arr, axis=0)
-            print(center)
-            print(node_score[fg[0]])
-            drawer.DrawString(str(round(node_score[fg[0]], 2)), Geometry.Point2D(center[0], center[1]))
+            drawer.DrawString(str(round(node_score[group[0]], 2)), Geometry.Point2D(center[0], center[1]))
             
         drawer.FinishDrawing()
         # if '.png' in path:
