@@ -202,6 +202,9 @@ class drug_sal:
                 self.single_atom_idx.append(subtuple[0])
             else:
                 self.group_atom_idx.append([idx for idx in subtuple])
+
+    def decomp_atom(self):
+        self.mol = Chem.MolFromSmiles(self.smiles)
         
     def compute_sal_score(self):
         # node:
@@ -217,6 +220,40 @@ class drug_sal:
             new_sal_dict[idxes[0]] = fg_score
             
         self.node_sal_dict = new_sal_dict    # this is a dict
+        
+        # edge:
+        edge_ss_dict = defaultdict(float)
+        counts = defaultdict(int)
+        for val, x, y in zip(self.edge_score, *self.edge_idx):
+            if x > y:
+                x, y = y, x
+            edge_ss_dict[(x, y)] += val
+            counts[(x, y)] += 1
+            
+        for edge, count in counts.items():
+            edge_ss_dict[edge] /= count
+            
+        min_ss = min(edge_ss_dict.values())
+        max_ss = max(edge_ss_dict.values())
+        
+        for edge, value in edge_ss_dict.items():
+            edge_ss_dict[edge] = (value - min_ss)/(max_ss - min_ss)
+            # edge_ss_dict[edge] = -1 + 2*(value - min_ss)/(max_ss - min_ss)
+            edge_ss_dict[edge] = edge_ss_dict[edge].round(2)
+            
+        bond_weights = []
+        for i, bond in enumerate(self.mol.GetBonds()):
+            u, v = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            if u > v:
+                u, v = v, u
+            bond_weights.append(edge_ss_dict[(u, v)])
+            
+        self.edge_sal = bond_weights    # this is a list
+
+    def compute_sal_score_atom_level(self):
+        # node:
+        stand_node_sal = (self.node_score - self.node_score.min())/(self.node_score.max() - self.node_score.min())
+        self.node_sal_dict = stand_node_sal.round(2)
         
         # edge:
         edge_ss_dict = defaultdict(float)
@@ -270,6 +307,20 @@ class drug_sal:
             if self.in_same_fg(b.GetBeginAtomIdx(), b.GetEndAtomIdx()):
                 self.bondmap[b_id] = self.atommap[b.GetBeginAtomIdx()]
             
+        self.highlights = {
+            "highlightAtoms": list(self.atommap.keys()),
+            "highlightAtomColors": self.atommap,
+            "highlightBonds": list(self.bondmap.keys()),
+            "highlightBondColors": self.bondmap,
+        }
+
+    def compute_color_atom_level(self):
+        my_cmap = cm.get_cmap('coolwarm')
+        my_norm = Normalize(vmin=0, vmax=1)
+
+        self.atommap = {i:my_cmap(my_norm(self.node_sal_dict[i]))[:3] for i in range(len(self.node_sal_dict))}
+        self.bondmap = {i:my_cmap(my_norm(self.edge_sal[i]))[:3] for i in range(len(self.edge_sal))}
+
         self.highlights = {
             "highlightAtoms": list(self.atommap.keys()),
             "highlightAtomColors": self.atommap,
@@ -360,20 +411,97 @@ class drug_sal:
         # except Exception as e:
         #     print("Check your molecule!!!",e)
         #     return
+    
+    def draw_mol_atom_level(self, asMol=False, label=None, path='', imgsize=(800, 600)):
+        '''
+        highlights is a dictionary, which may contains:
+        highlightAtoms: list
+        highlightBonds: list
+        highlightAtomRadii: dict[int]=float, atom index (int), radius (float)
+        highlightAtomColors: dict[int]=tuple, index (int), color (tuple, length=3)
+        highlightBondColors: dict[int]=tuple,index (int), color (tuple, length=3)
+        '''
+        smiles = self.smiles
+        node_score = self.node_sal_dict
+        edge_score = self.edge_sal
+        hightlights = self.highlights
+        svg_path = path + '_svg'
+        os.makedirs(svg_path, exist_ok=True)
+        svg_filename = os.path.join(svg_path, self.name + '.svg')
+        filename = os.path.join(path, self.name + '.png')
+        
+        if asMol:
+            mol = self.smiles.__copy__()
+        else:
+            mol = self.mol
+        # try:
+        mol = rdMolDraw2D.PrepareMolForDrawing(mol)
+        # if '.png' in filename:
+        #     drawer = rdMolDraw2D.MolDraw2DCairo(*imgsize)
+        # else:
+        drawer = rdMolDraw2D.MolDraw2DSVG(*imgsize)
+        opts = drawer.drawOptions()
+        if label == 'map':
+            for i in range(mol.GetNumAtoms()):
+                opts.atomLabels[i] = mol.GetAtomWithIdx(
+                    i).GetSymbol()+str(mol.GetAtomWithIdx(i).GetAtomMapNum())
+        if label == 'idx':
+            for i in range(mol.GetNumAtoms()):
+                opts.atomLabels[i] = mol.GetAtomWithIdx(i).GetSymbol()+str(i)
+        if label == 'score':
+            assert node_score is not None
+            assert edge_score is not None
+
+            for atom in mol.GetAtoms():
+                idx = atom.GetIdx()
+                atom.SetProp("atomNote", str(round(node_score[idx], 2)))
+            
+            for bond in mol.GetBonds():
+                idx = bond.GetIdx()
+                bond.SetProp("bondNote", str(round(edge_score[idx], 2)))
+            
+        if not self.highlights:
+            drawer.DrawMolecule(mol)
+        else:
+            drawer.DrawMolecule(mol, **self.highlights)
+        drawer.FinishDrawing()
+        # if '.png' in path:
+        #     drawer.WriteDrawingText(path)
+            # display(Image(path))
+        # else:
+        svg = drawer.GetDrawingText()
+        # display(SVG(svg.replace('svg:','')))
+        if '.svg' in svg_filename:
+            with open(svg_filename, 'w') as wf:
+                print(svg, file=wf)
+            # Convert SVG to PNG
+            cairosvg.svg2png(url=svg_filename, write_to=filename)
+        return drawer
+        # except Exception as e:
+        #     print("Check your molecule!!!",e)
+                             
 
 
-def draw_fg_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
+def draw_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_index_dict, save_path, annotation_type):
     '''
         draw the saliency scores according to the FGs
     '''
-    for k, v in tqdm(edge_sal_dict.items()):
-        # print('working on ', k)
-        drug_sal_instance = drug_sal(k, smiles_dict[k], node_sal_dict[k], v, edge_index_dict[k])
-        drug_sal_instance.decomp_fg(decoding_voc)
-        drug_sal_instance.compute_sal_score()
-        drug_sal_instance.compute_color()
-        drug_sal_instance.draw_mol(label='score', path=save_path)
-
+    if annotation_type == 3:
+        for k, v in tqdm(edge_sal_dict.items()):
+            # print('working on ', k)
+            drug_sal_instance = drug_sal(k, smiles_dict[k], node_sal_dict[k], v, edge_index_dict[k])
+            drug_sal_instance.decomp_fg(decoding_voc)
+            drug_sal_instance.compute_sal_score()
+            drug_sal_instance.compute_color()
+            drug_sal_instance.draw_mol(label='score', path=save_path)
+    else:
+        for k, v in tqdm(edge_sal_dict.items()):
+            # print('working on ', k)
+            drug_sal_instance = drug_sal(k, smiles_dict[k], node_sal_dict[k], v, edge_index_dict[k])
+            drug_sal_instance.decomp_atom()
+            drug_sal_instance.compute_sal_score_atom_level()
+            drug_sal_instance.compute_color_atom_level()
+            drug_sal_instance.draw_mol_atom_level(label='score', path=save_path)
 
 def normalize_ss(sal_dict):
     for k, v in sal_dict.items():

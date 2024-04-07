@@ -8,7 +8,7 @@ from utils_data import TestbedDataset
 # from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet, WIRGATNet, ARGATNet, RGCNNet
 from rdkit_heatmaps.molmapping import mapvalues2mol
 from rdkit_heatmaps.utils import transform2png
-from utils_decoding import make_ss_dict, make_edge_dict, draw_mol_saliency_scores, draw_fg_saliency_scores
+from utils_decoding import make_ss_dict, make_edge_dict, draw_mol_saliency_scores, draw_saliency_scores
 import pickle
 
 parser = argparse.ArgumentParser()
@@ -46,7 +46,7 @@ if annotation == 0:
 elif annotation == 1:
     d_save_path = d_save_path + '/heatmap'
 elif annotation == 2:
-    d_save_path = d_save_path + '/ss+heatmap'
+    d_save_path = d_save_path + '/atom_heatmap'
 elif annotation == 3:
     d_save_path = d_save_path + '/fg_heatmap'
 else:
@@ -61,7 +61,13 @@ smiles_dict, edge_idx_dict = make_edge_dict(test_loader)
 if annotation == 3:
     with open('data/GDSC/decoding_vocabulary.pkl', 'rb') as file:
         decoding_voc = pickle.load(file)
-    # print('decoding vocabulary: ', decoding_voc)
-    draw_fg_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
 else:
-    draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
+    decoding_voc = None
+draw_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
+# if annotation == 3:
+#     with open('data/GDSC/decoding_vocabulary.pkl', 'rb') as file:
+#         decoding_voc = pickle.load(file)
+#     # print('decoding vocabulary: ', decoding_voc)
+#     draw_fg_saliency_scores(decoding_voc, node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
+# else:
+#     draw_mol_saliency_scores(node_sal_dict, edge_sal_dict, smiles_dict, edge_idx_dict, d_save_path, annotation)
