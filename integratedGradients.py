@@ -5,9 +5,10 @@ from captum.attr import Saliency, IntegratedGradients
 import numpy as np
 import pandas as pd
 import argparse, os
-
+from tqdm import tqdm
 from utils_data import TestbedDataset
-from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet, WIRGATNet, RGCNNet
+from models import GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet, WIRGATNet, ARGATNet, RGCNNet
+from utils_preproc import preproc_gene_expr
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model", type=int, default=0, help="model type: 0:GCN, 1:GAT, 2:GAT_Edge, 3:GATv2, 4:SAGE, 5:GIN, 6:GINE, 7:WIRGAT, 8:ARGAT, 9:RGCN")
@@ -15,6 +16,7 @@ parser.add_argument("-o", "--object", type=int, default=2, help="decoding object
 parser.add_argument("-g", "--gpu", type=int, default=1, help="gpu number")
 parser.add_argument("-b", "--branch", type=str, default='001', help="branch")
 parser.add_argument("-q", "--iqr_baseline", action="store_true", default=False, help="add this tag to use iqr_mean baseline")
+parser.add_argument("-a", "--do_attn", action="store_true", default=False, help="add this flag to combine features with attn layer")
 
 args = parser.parse_args()
 model_type = args.model
@@ -22,6 +24,7 @@ decoding_object = args.object
 gpu = args.gpu
 b = args.branch
 iqr_baseline = args.iqr_baseline
+do_attn = args.do_attn
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
 # os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
@@ -32,11 +35,12 @@ device = torch.device(gpu if torch.cuda.is_available() else "cpu")
 # model = GATNet_E()
 # model_path = 'root_folder/root_002/results/model_GAT_Edge-EP300-SW801010_GDSC.model'
 
-model = [GCNNet(), GATNet(), GATNet_E(), GATv2Net(), SAGENet(), GINNet(), GINENet(), WIRGATNet(), None, RGCNNet()][model_type]
+model_class = [GCNNet, GATNet, GATNet_E, GATv2Net, SAGENet, GINNet, GINENet, WIRGATNet, ARGATNet, RGCNNet][model_type]
+model = model_class(use_attn=do_attn)
 model_name = ['GCN', 'GAT', 'GAT_Edge', 'GATv2', 'SAGE', 'GIN', 'GINE', 'WIRGAT', 'ARGAT', 'RGCN'][model_type]
 
 branch_folder = "root_folder/root_" + b
-model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC.model')
+model_path = os.path.join(branch_folder, 'models/model_' + model_name + '-EP300-SW801010_GDSC_best1.model')
 
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.to(device)
@@ -64,7 +68,7 @@ def model_forward(input_mask, data):
     return output
 
 
-def explain(data, device, decoding_type, baseline):
+def explain(data, device, decoding_type, do_baseline, gene_baseline):
     data = data.to(device)
     if decoding_type == 'Atom':
         # input_mask = torch.ones(data.x.shape[0], data.x.shape[1]).requires_grad_(True).to(device)
@@ -86,10 +90,7 @@ def explain(data, device, decoding_type, baseline):
 #     print(input_mask_drug.shape)
 #     print(data.edge_index.shape)
     ig = IntegratedGradients(model_forward)
-    if baseline:
-        df = pd.read_csv('data/gene_statistics.csv', header=0, index_col=0)
-        # TODO: how to use top n genes with high variance?
-        gene_baseline = torch.Tensor(df['filtered_mean'].values).reshape(1, 1, -1).to(device)
+    if do_baseline:
         mask = ig.attribute(input_mask, 
                              target = 0,    # target is the interested output dim for decoding, in our case it's 0 (the only dim), but in multi-class classification task it could be other values
                              additional_forward_args = (data,), 
@@ -157,8 +158,24 @@ else:
 # save_path_cell = os.path.join(branch_folder, 'Saliency/CellLine/' + model_name + '/')
 os.makedirs(save_path, exist_ok=True)
 
-for idx, data in enumerate(test_loader):
-    print(idx)
+# ---------------------------- GET LANDMARK GENES ---------------------------- #
+if iqr_baseline:
+    ccle_df = pd.read_csv('data/CCLE/CCLE_expression.csv', header=0, index_col=0)
+    meta_df = pd.read_csv('data/CCLE/sample_info.csv',
+                            header=0, usecols=['DepMap_ID', 'COSMICID'])
+    processed_df = preproc_gene_expr(ccle_df, meta_df, filter_by_l1000=True)
+    landmark_genes = processed_df.columns.values
+    assert len(landmark_genes) == 956
+
+    df = pd.read_csv('data/gene_statistics.csv', header=0, index_col=0)
+    filtered_df = df.loc[landmark_genes]
+    # TODO: how to use top n genes with high variance?
+    gene_baseline = torch.Tensor(filtered_df['filtered_mean'].values).reshape(1, 1, -1).to(device)
+else:
+    gene_baseline = None
+
+for idx, data in enumerate(tqdm(test_loader)):
+    # print(idx)
     drug_name = data.drug_name[0]
     cell_line_name = data.cell_line_name[0]
     # print('drug name: ', drug_name)
@@ -166,7 +183,7 @@ for idx, data in enumerate(test_loader):
 #     print(type(data))
 #     print(data.batch)
     data = data.to(device)
-    mask_drug = explain(data, device, decoding_type, iqr_baseline)
+    mask_drug = explain(data, device, decoding_type, iqr_baseline, gene_baseline)
     # mask_cell = explain_cell_line(data, device)
     # print(mask_drug)
     # print(mask_cell)
