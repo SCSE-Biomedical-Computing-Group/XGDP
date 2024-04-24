@@ -8,8 +8,15 @@ conda env create --file=environment.yml
 
 ---
 
-## Preprocess the data
+## Data Preparation
 
+### Download the raw data
+
+Download the drug response data in IC50 called PANCANCER_IC from [GDSC](https://www.cancerrxgene.org/downloads/drug_data). And download the gene expression data called CCLE_expression from [CCLE](https://depmap.org/portal/download/all/) under mRNA expression. 
+
+### Preprocess the data
+
+Place the PANCANCER_IC data under folder `data/GDSC` and place the CCLE_expression data under folder `data/CCLE`. Then run
 ```
 python load_data.py <branch_num>
 ```
