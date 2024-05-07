@@ -16,14 +16,20 @@ Download the drug response data in IC50 called PANCANCER_IC from [GDSC](https://
 
 ### Preprocess the data
 
-Place the PANCANCER_IC data under folder `data/GDSC` and place the CCLE_expression data under folder `data/CCLE`. Then run
+- Create a folder in your project directory called `root_folder`.
+``` bash
+mkdir root_folder
 ```
+
+- Place the PANCANCER_IC data under folder `data/GDSC` and place the CCLE_expression data under folder `data/CCLE`. Run the following command to preprocess the data. 
+The data will be saved under `root_folder/<branch_num>`.
+``` python
 python load_data.py <branch_num>
 ```
 
 ## Train the model
 
-```
+``` python
 python train.py \
         --model <model_num>
         --branch <branch_num>
@@ -36,7 +42,7 @@ python train.py \
 
 ### Attribute the chemical structures with GNNExplainer
 
-```
+``` python
 python gnnexplainer.py \
         --model <model_num>
         --branch <branch_num>
@@ -53,11 +59,14 @@ python draw_gnnexplainer.py \
 
 ### Attribute the gene expression values with Integrated Gradients
 
-```
+``` python
 python integrated_gradients.py \
         --model <model_num>
         --branch <branch_num>
         --do_attn
         --iqr_baseline
 ```
-Refer to `pathway_analysis.ipynb` for the pathway analysis experiments based on the gene saliency scores.
+#### Pathway Analysis
+
+- Download the gene sets from [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp) and place them under `data/`.
+- Refer to `pathway_analysis.ipynb` for the pathway analysis experiments based on the gene saliency scores.
