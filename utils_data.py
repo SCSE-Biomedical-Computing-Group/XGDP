@@ -16,8 +16,6 @@ from torch_geometric import data as DATA
 import torch
 import matplotlib.pyplot as plt
 
-import utils_preproc
-
 
 class TestbedDataset(InMemoryDataset):
     def __init__(self, root='root_folder', dataset='davis',
