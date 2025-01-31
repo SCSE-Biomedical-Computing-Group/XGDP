@@ -12,7 +12,9 @@ conda env create --file=environment.yml
 
 ### Download the raw data
 
-Download the drug response data in IC50 called PANCANCER_IC from [GDSC](https://www.cancerrxgene.org/downloads/drug_data). And download the gene expression data called CCLE_expression from [CCLE](https://depmap.org/portal/download/all/) under mRNA expression. 
+The data used in this study is available in our [Google drive](https://drive.google.com/drive/folders/1n-30SyGfHbdV08H_cGKjFCqJ9fSnL4DV?usp=sharing).
+
+If you want to use the latest dataset, download the drug response data in IC50 format called PANCANCER_IC from [GDSC](https://www.cancerrxgene.org/downloads/drug_data). And download the gene expression data called CCLE_expression from [CCLE](https://depmap.org/portal/download/all/) under mRNA expression. 
 
 ### Preprocess the data
 
@@ -21,7 +23,7 @@ Download the drug response data in IC50 called PANCANCER_IC from [GDSC](https://
 mkdir root_folder
 ```
 
-- Place the PANCANCER_IC data under folder `data/GDSC` and place the CCLE_expression data under folder `data/CCLE`. Run the following command to preprocess the data. 
+- Place the PANCANCER_IC data under folder `data/GDSC` and place the CCLE_expression data under folder `data/CCLE`. Choose a `<branch_num>` as you like and run the following command to preprocess the data. 
 The data will be saved under `root_folder/<branch_num>`.
 ``` python
 python load_data.py <branch_num>
@@ -40,6 +42,8 @@ python train.py \
 
 ## Explain the model
 
+Instead of training the models from scratch, you can use the pretrained models under `models/`. Place them under `root_folder/<branch_num>` where you stored the processed data in [Preprocess the data](###Preprocess the data)
+
 ### Attribute the chemical structures with GNNExplainer
 
 ``` python
@@ -56,6 +60,10 @@ python draw_gnnexplainer.py \
 ```
 - Available explaining types: 0:model, 1:phenomenon
 - Available annotation types: 0:numbers, 1:heatmap, 2:both, 3:functional group-level heatmap
+    - Numbers: Only the saliency scores will be visualized 
+    - Heatmap: The atom-level heatmap to show saliency levels
+    - Both: Both numbers and heatmaps will be displayed
+    - Functional group-level heatmap **(Recommended)**: The saliency scores are accumulated for each functional groups rather than atoms. Both numbers and heatmaps will be displayed with this mode. 
 
 ### Attribute the gene expression values with Integrated Gradients
 
